@@ -2,16 +2,16 @@
 
 void Scheduler::processFloorRequests() {
     while (true) {
-        std::unique_lock<std::mutex> lock(mtx);
+        std::unique_lock<std::mutex> lock(mtxFloorToScheduler);
 
         // Wait for a request from the Floor Subsystem
-        cv.wait(lock, [] { return !schedulerQueue.empty(); });    
+        cv.wait(lock, [] { return !floorToScheduler.empty(); });    
 
         std::cout << "RECIEVING DATA FROM FLOOR" << std::endl;
         // Retrieve the request from the queue
-        FloorRequest request = schedulerQueue.front();
+        FloorRequest request = floorToScheduler.front();
         
-        schedulerQueue.pop();  // Pop first element from queue
+        floorToScheduler.pop();  // Pop first element from "floorToScheduler" queue
 
         lock.unlock();
 
