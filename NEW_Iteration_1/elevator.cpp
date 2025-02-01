@@ -1,41 +1,38 @@
-// What does the elevator need to do?
-// needs to go up and down floors
-// needs to have buttons that tell the system which floors to go to
-// needs a door and motor to let people in/get people out (static variable)
 #include "elevator.h"
 #include "scheduler.h"
+#include <atomic>
 
+// Global counter of pending requests:
+extern std::atomic<int> pendingRequests;
+extern std::atomic<bool> stopThreads;
 
 void Elevator::processRequests() {
     while (true) {
         std::unique_lock<std::mutex> lock(mtxSchedulerToElevator);
         // Wait for a request from the Scheduler Subsystem
-        cvSchedulerToElevator.wait(lock, [] { return !schedulerToElevator.empty(); });
+        cvSchedulerToElevator.wait(lock, [] { return !schedulerToElevator.empty() || stopThreads; });
 
-        // Retrieve the request from the queue
+        // Terminating if all requests have been processed:
+        if (stopThreads = true && schedulerToElevator.empty()) {
+            std::cout << "[Elevator] No more requests. Terminating..." << std::endl;
+            return;
+        }
+
+        // Retrieve the request from the schedulerToElevator queue
         FloorRequest request = schedulerToElevator.front();
         schedulerToElevator.pop();
         lock.unlock();
 
-        // Debug: Print received request
-        std::cout << "[Elevator] Received request: Move from Floor " << request.floor
-                  << " to Destination " << request.destination
-                  << " (Direction: " << request.direction << ")" << std::endl;
-
-        // Ensure valid request
         if (request.floor == 0 && request.destination == 0 && request.direction.empty()) {
             std::cerr << "[ERROR] Elevator received an invalid request!" << std::endl;
             continue;
         }
 
-        // Print retrieved request:
-        std::cout << "[Elevator] Received request: Move from Floor " << request.floor
-                  << " to Destination " << request.destination << " (Direction: "
-                  << request.direction << ")" << std::endl;
+        std::cout << "[Elevator] Moving from Floor " << request.floor
+                  << " to Destination " << request.destination
+                  << " (Direction: " << request.direction << ")" << std::endl;
 
-        // Simulate elevator movement:
-        std::cout << "[Elevator] Moving to Floor " << request.destination << "..." << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(2));  // Simulate travel time - 2 Seconds
+        std::this_thread::sleep_for(std::chrono::seconds(2));
 
         //  Notify Scheduler that the Elevator has arrived
         {
@@ -43,8 +40,5 @@ void Elevator::processRequests() {
             elevatorToScheduler.push(request);
         }
         cvElevatorToScheduler.notify_one();
-
-        std::cout << "[Elevator] Reached destination: " << request.destination << std::endl;
-        
     }
 }

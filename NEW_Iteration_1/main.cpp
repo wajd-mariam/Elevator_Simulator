@@ -6,17 +6,20 @@
 #include "scheduler.h"
 #include "elevator.h"
 
+// Tracking number of pending requests:
+std::atomic<int> pendingRequests(0);
+std::atomic<bool> stopThreads(false);
 
 int main() {
     std::string filename = "input.txt";
 
-    // Create Scheduler and Floor subsystems:
+    // Create Scheduler, Floor, and Elevator objects:
     Floor floorSystem(1, filename);
     Scheduler scheduler;
     Elevator elevator;
     floorSystem.printAllRequests();
 
-    // Create threads for Floor and Scheduler:
+    // Create Scheduler, Floor, and Elevator threads:
     std::thread floorThread(&Floor::sendRequestsToScheduler, &floorSystem);
     std::thread schedulerThread(&Scheduler::processFloorRequests, &scheduler);
     std::thread elevatorThread(&Elevator::processRequests, &elevator);
@@ -26,5 +29,6 @@ int main() {
     schedulerThread.join();
     elevatorThread.join();
 
+    std::cout << "Program terminated successfully." << std::endl;
     return 0;
 }

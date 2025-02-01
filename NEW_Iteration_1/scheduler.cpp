@@ -2,7 +2,12 @@
 #include "floor.h"
 #include <iostream>
 #include <thread>
+#include <atomic>
 #include <chrono> 
+
+// Global counter of pending requests:
+extern std::atomic<int> pendingRequests;
+extern std::atomic<bool> stopThreads; 
 
 std::queue<FloorRequest> schedulerToElevator;
 std::mutex mtxSchedulerToElevator;
@@ -12,12 +17,16 @@ std::queue<FloorRequest> elevatorToScheduler;
 std::mutex mtxElevatorToScheduler;
 std::condition_variable cvElevatorToScheduler;
 
+std::queue<FloorRequest> schedulerToFloor;
+std::mutex mtxSchedulerToFloor;
+std::condition_variable cvSchedulerToFloor;
+
 void Scheduler::processFloorRequests() {
     while (true) {
         std::unique_lock<std::mutex> lock(mtxFloorToScheduler);
 
         // Wait for a request from the Floor Subsystem
-        cvFloorToScheduler.wait(lock, [] { return !floorToScheduler.empty() || !elevatorToScheduler.empty(); });   
+        cvFloorToScheduler.wait(lock, [] { return !floorToScheduler.empty() || !elevatorToScheduler.empty() || pendingRequests > 0 || stopThreads; });   
 
         // Handle Elevator Arrivals FIRST (before sending new requests from floor to elevator)
         if (!elevatorToScheduler.empty()) {
@@ -26,12 +35,22 @@ void Scheduler::processFloorRequests() {
             lock.unlock();
 
             std::cout << "[Scheduler] Elevator arrived at Floor " << arrivedAtFloor.destination << std::endl;
+            
+            pendingRequests--;
+            std::cout << "DEBUG: pending request value:" << pendingRequests << std::endl;
+            if (pendingRequests == 0) {
+                stopThreads = true;
+                std::cout << "[Scheduler] All requests processed. Terminated..." << std::endl;
+                cvSchedulerToElevator.notify_all();  // Wake up elevator to notify of system shut down
+                cvFloorToScheduler.notify_all();
+                return;
+            }
             continue; 
         }
 
         // Check new requests from floor:
         if (!floorToScheduler.empty()) {
-            std::cout << "RECIEVING DATA FROM FLOOR" << std::endl;
+            std::cout << "[Scheduler] Processing request..." << std::endl;
             // Retrieve the request from the queue
             FloorRequest request = floorToScheduler.front();
             floorToScheduler.pop();  // Pop first element from "floorToScheduler" queue
@@ -56,6 +75,21 @@ void Scheduler::processFloorRequests() {
             }
             cvSchedulerToElevator.notify_one();
             std::cout << "[Scheduler] Sent request to Elevator queue" << std::endl;
+        
+            // Wait for Elevator confirmation before processing the next request
+            std::unique_lock<std::mutex> lockElevator(mtxElevatorToScheduler);
+            cvElevatorToScheduler.wait(lockElevator, [] { return !elevatorToScheduler.empty(); });
+
+            FloorRequest completedRequest = elevatorToScheduler.front();
+            elevatorToScheduler.pop();
+            std::cout << "[Scheduler] Elevator completed request: Floor " << completedRequest.floor
+                      << " -> Destination " << completedRequest.destination << std::endl;
+            
+            {
+                std::lock_guard<std::mutex> lock(mtxSchedulerToFloor);
+                schedulerToFloor.push(completedRequest);
+            }
+            cvSchedulerToFloor.notify_one();  // ✅ Wake up Floor
         }
     }
 };

@@ -1,5 +1,9 @@
 #include "floor.h"
+#include "scheduler.h"
+#include <atomic>
 
+// Global counter of pending requests:
+extern std::atomic<int> pendingRequests;
 
 std::queue<FloorRequest> floorToScheduler;
 std::mutex mtxFloorToScheduler; 
@@ -25,7 +29,10 @@ void Floor::readInputFile(const std::string& filename) {
         std::cout << "[DEBUG] Reading line: " << line << std::endl;
         FloorRequest req = parseRequest(line);
         this->requests.push_back(req);
-    
+        
+        pendingRequests++;
+        std::cout << "DEBUG: pending request value:" << pendingRequests << std::endl;
+
         // DEBUG: Print parsed request details
         std::cout << "[DEBUG] Parsed Request -> Time: " << req.timeStamp
                   << ", Floor: " << req.floor
@@ -58,12 +65,20 @@ void Floor::printAllRequests() {
 
 void Floor::sendRequestsToScheduler() {
     for (const FloorRequest& req : this->requests) {
-        std::cout << "SENDING DATA" << std::endl;
+        std::cout << "[Floor] Sending request to Scheduler:" << std::endl;
         {
             std::lock_guard<std::mutex> lock(mtxFloorToScheduler);
             floorToScheduler.push(req);
         }
         cvFloorToScheduler.notify_one(); // Notifying Scheduler thread
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+
+        // Wait for aknowledgment from Scheduler before sending the next request
+        std::unique_lock<std::mutex> lock(mtxSchedulerToFloor);
+        cvSchedulerToFloor.wait(lock, [] { return !schedulerToFloor.empty(); });
+
+        FloorRequest processedRequest = schedulerToFloor.front();
+        schedulerToFloor.pop();
+        std::cout << "[Floor] Acknowledgment received for request: Floor " << processedRequest.floor
+                  << " -> Destination " << processedRequest.destination << std::endl;
     }
 }
