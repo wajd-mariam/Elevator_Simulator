@@ -24,12 +24,11 @@ std::condition_variable cvSchedulerToFloor;
 void Scheduler::processFloorRequests() {
     while (true) {
         std::unique_lock<std::mutex> lock(mtxFloorToScheduler);
-
         // Wait for a request from the Floor Subsystem
         cvFloorToScheduler.wait(lock, [] { return !floorToScheduler.empty() || !elevatorToScheduler.empty() || pendingRequests > 0 || stopThreads; });   
 
-        // Handle Elevator Arrivals FIRST (before sending new requests from floor to elevator)
-        if (!elevatorToScheduler.empty()) {
+        // Handle Elevator Arrivals FIRST (before sending new requests from schedular to elevator)
+        /**if (!elevatorToScheduler.empty()) {
             FloorRequest arrivedAtFloor = elevatorToScheduler.front();
             elevatorToScheduler.pop();
             lock.unlock();
@@ -40,13 +39,23 @@ void Scheduler::processFloorRequests() {
             std::cout << "DEBUG: pending request value:" << pendingRequests << std::endl;
             if (pendingRequests == 0) {
                 stopThreads = true;
-                std::cout << "[Scheduler] All requests processed. Terminated..." << std::endl;
+                std::cout << "[Scheduler] All requests processed. Terminating..." << std::endl;
                 cvSchedulerToElevator.notify_all();  // Wake up elevator to notify of system shut down
                 cvFloorToScheduler.notify_all();
+                cvElevatorToScheduler.notify_all();
                 return;
             }
             continue; 
-        }
+
+            // Notify Floor:
+            {
+                std::lock_guard<std::mutex> lock(mtxSchedulerToFloor);
+                schedulerToFloor.push(arrivedAtFloor);
+            }
+            cvSchedulerToFloor.notify_one();
+
+            
+        }*/
 
         // Check new requests from floor:
         if (!floorToScheduler.empty()) {
@@ -89,7 +98,17 @@ void Scheduler::processFloorRequests() {
                 std::lock_guard<std::mutex> lock(mtxSchedulerToFloor);
                 schedulerToFloor.push(completedRequest);
             }
-            cvSchedulerToFloor.notify_one();  // ✅ Wake up Floor
+            cvSchedulerToFloor.notify_one();  // Wake up Floor
+
+            pendingRequests--;
+            if (pendingRequests == 0) {
+                stopThreads = true;
+                std::cout << "[Scheduler] All requests processed. Terminating..." << std::endl;
+                cvSchedulerToElevator.notify_all();  // Wake up elevator to notify of system shut down
+                cvFloorToScheduler.notify_all();
+                cvElevatorToScheduler.notify_all();
+                return;
+            }
         }
     }
 };
