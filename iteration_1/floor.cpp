@@ -1,8 +1,8 @@
 #include "floor.h"
 
 
-std::queue<FloorRequest> schedulerQueue;
-std::mutex mtx; 
+std::queue<FloorRequest> floorToScheduler;
+std::mutex mtxFloorToScheduler; 
 std::condition_variable cv;
 
 // Constructor
@@ -61,8 +61,8 @@ void Floor::sendRequestsToScheduler() {
     for (const FloorRequest& req : this->requests) {
         std::cout << "SENDING DATA" << std::endl;
         {
-            std::lock_guard<std::mutex> lock(mtx);
-            schedulerQueue.push(req);
+            std::lock_guard<std::mutex> lock(mtxFloorToScheduler);
+            floorToScheduler.push(req);
         }
         cv.notify_one(); // Notifying Scheduler thread
         std::this_thread::sleep_for(std::chrono::seconds(1));

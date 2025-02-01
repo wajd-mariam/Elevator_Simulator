@@ -24,10 +24,13 @@ struct FloorRequest {
         : timeStamp(t), floor(f), direction(d), destination(dest), elevatorNum(e) {}
 };
 
-// Shared queue for communication with scheduler
-extern std::queue<FloorRequest> schedulerQueue;
-extern std::mutex mtx; 
-extern std::condition_variable cv;
+// Shared queue for communication with floor & Scheduler
+extern std::queue<FloorRequest> floorToScheduler; // Floor -> Scheduler
+extern std::queue<FloorRequest> schedulerToFloor; // Scheduler -> Floor
+extern std::mutex mtxFloorToScheduler; 
+extern std::mutex mtxSchedulerToFloor; 
+extern std::condition_variable cvFloorToScheduler;
+extern std::condition_variable cvSchedulerToFloor;
 
 class Floor {
 private:
