@@ -34,7 +34,8 @@ void Floor::readInputFile(const std::string& filename) {
     }
     file.close();
 }
-    
+
+
 // Parses a request line into a FloorRequest object
 FloorRequest Floor::parseRequest(const std::string& line) {
     std::istringstream iss(line);
@@ -42,7 +43,6 @@ FloorRequest Floor::parseRequest(const std::string& line) {
     int floorNum, destination, elevatorNum;
 
     iss >> timeStamp >> floorNum >> direction >> destination >> elevatorNum;
-
     return FloorRequest(timeStamp, floorNum, direction, destination, elevatorNum);
 }
 
@@ -54,5 +54,17 @@ void Floor::printAllRequests() {
                 << ", Direction: " << req.direction
                 << ", Destination: " << req.destination
                 << ", Elevator: " << req.elevatorNum << std::endl;
+    }
+}
+
+void Floor::sendRequestsToScheduler() {
+    for (const FloorRequest& req : this->requests) {
+        std::cout << "SENDING DATA" << std::endl;
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            schedulerQueue.push(req);
+        }
+        cv.notify_one(); // Notifying Scheduler thread
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 }

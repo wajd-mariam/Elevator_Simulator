@@ -41,7 +41,6 @@ public:
     FloorRequest parseRequest(const std::string& line);
     void printAllRequests(); // DEBUGGING
     void sendRequestsToScheduler();
-    void operator()();
 };
 
 #endif // FLOOR_H
