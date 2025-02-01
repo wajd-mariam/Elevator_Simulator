@@ -15,9 +15,14 @@ extern std::queue<FloorRequest> elevatorToScheduler;
 extern std::mutex mtxElevatorToScheduler;
 extern std::condition_variable cvElevatorToScheduler;
 
+extern std::queue<FloorRequest> schedulerToFloor;
+extern std::mutex mtxSchedulerToFloor;
+extern std::condition_variable cvSchedulerToFloor;
+
 class Scheduler {
 public:
     void processFloorRequests();
+    void processElevatorArrivals();
 };
 
 #endif // SCHEDULER_H

@@ -17,30 +17,45 @@ void Scheduler::processFloorRequests() {
         std::unique_lock<std::mutex> lock(mtxFloorToScheduler);
 
         // Wait for a request from the Floor Subsystem
-        cvFloorToScheduler.wait(lock, [] { return !floorToScheduler.empty(); });    
+        cvFloorToScheduler.wait(lock, [] { return !floorToScheduler.empty() || !elevatorToScheduler.empty(); });   
 
-        std::cout << "RECIEVING DATA FROM FLOOR" << std::endl;
-        // Retrieve the request from the queue
-        FloorRequest request = floorToScheduler.front();
-        
-        floorToScheduler.pop();  // Pop first element from "floorToScheduler" queue
+        // Handle Elevator Arrivals FIRST (before sending new requests from floor to elevator)
+        if (!elevatorToScheduler.empty()) {
+            FloorRequest arrivedAtFloor = elevatorToScheduler.front();
+            elevatorToScheduler.pop();
+            lock.unlock();
 
-        lock.unlock();
-
-        std::cout << "[Scheduler] Processing request: "
-                  << "Time: " << request.timeStamp
-                  << ", Floor: " << request.floor
-                  << ", Direction: " << request.direction
-                  << ", Destination: " << request.destination << std::endl;
-    
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-        // Forward request to Elevator
-        {
-            std::lock_guard<std::mutex> lock(mtxSchedulerToElevator);
-            schedulerToElevator.push(request);
+            std::cout << "[Scheduler] Elevator arrived at Floor " << arrivedAtFloor.destination << std::endl;
+            continue; 
         }
-        cvSchedulerToElevator.notify_one();
-        std::cout << "[Scheduler] Sent request to Elevator queue" << std::endl;
+
+        // Check new requests from floor:
+        if (!floorToScheduler.empty()) {
+            std::cout << "RECIEVING DATA FROM FLOOR" << std::endl;
+            // Retrieve the request from the queue
+            FloorRequest request = floorToScheduler.front();
+            floorToScheduler.pop();  // Pop first element from "floorToScheduler" queue
+
+            lock.unlock();
+
+            std::cout << "[Scheduler] Processing request: "
+                    << "Time: " << request.timeStamp
+                    << ", Floor: " << request.floor
+                    << ", Direction: " << request.direction
+                    << ", Destination: " << request.destination << std::endl;
+        
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+            // To ensure correct data transfer and avoid data corruption:
+            FloorRequest newRequest(request.timeStamp, request.floor, request.direction, request.destination);
+
+            // Forward request to Elevator
+            {
+                std::lock_guard<std::mutex> lock(mtxSchedulerToElevator);
+                schedulerToElevator.push(newRequest);
+            }
+            cvSchedulerToElevator.notify_one();
+            std::cout << "[Scheduler] Sent request to Elevator queue" << std::endl;
+        }
     }
-}
+};
