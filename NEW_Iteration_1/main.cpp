@@ -1,7 +1,11 @@
+#include <iostream>
+#include <thread>
 #include <string>
+#include <atomic>
 #include "floor.h"
 #include "scheduler.h"
 #include "elevator.h"
+
 
 int main() {
     std::string filename = "input.txt";

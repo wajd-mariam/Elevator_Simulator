@@ -14,10 +14,15 @@
 #include "FloorRequest.h"
 
 // Shared queue for communication 
-// With floor & Scheduler
-extern std::queue<FloorRequest> floorToScheduler;    // Floor -> Scheduler
+// Floor -> Scheduler
+extern std::queue<FloorRequest> floorToScheduler;    
 extern std::mutex mtxFloorToScheduler; 
 extern std::condition_variable cvFloorToScheduler;
+
+// Scheduler ->  Floor
+extern std::queue<FloorRequest> schedulerToFloor;
+extern std::mutex mtxSchedulerToFloor;
+extern std::condition_variable cvSchedulerToFloor;
 
 class Floor {
 private:
@@ -34,6 +39,7 @@ public:
     FloorRequest parseRequest(const std::string& line);
     void printAllRequests(); // DEBUGGING
     void sendRequestsToScheduler();
+    void listenForElevatorArrival();
 };
 
 #endif // FLOOR_H
