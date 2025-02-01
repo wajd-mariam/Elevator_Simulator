@@ -13,7 +13,7 @@ void Elevator::processRequests() {
         cvSchedulerToElevator.wait(lock, [] { return !schedulerToElevator.empty(); });
 
         // Retrieve the request from the queue
-        FloorRequest request = floorToScheduler.front();
+        FloorRequest request = schedulerToElevator.front();
         schedulerToElevator.pop();
         lock.unlock();
 
