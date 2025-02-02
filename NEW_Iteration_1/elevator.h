@@ -37,6 +37,20 @@ private:
     int floorGoingTo; // loaded in by scheduler
 
 public:
+    /**
+     * @brief Continuously processes elevator requests from the Scheduler.
+     *
+     * This function continuously checks for new elevator requests
+     * from the `schedulerToElevator` sharedqueue. It fetches request from Scheduler (real-time),
+     *  processes them, and then notifies the Scheduler when a request is completed.
+     *
+     * Workflow:
+     * 1. Wait for a request from the Scheduler (`cvSchedulerToElevator`).
+     * 2. If all requests are processed (`stopThreads == true`), terminate.
+     * 3. Retrieve and validate the request.
+     * 4. Simulate moving the elevator to the requested floor.
+     * 5. Notify the Scheduler that the request has been completed.
+     */
     void processRequests();
 };
 
