@@ -19,8 +19,8 @@ Date: February 1st
 ## Usage
 1) Extract SYSC_3303_B2_G1_Iteration1.zip file
 2) Open a new terminal window and copy the commands below:
-  "g++ -std=c++11 -o app main.cpp floor.cpp scheduler.cpp elevator.cpp -lpthread"
-  "./a"
+- "g++ -std=c++11 -o app main.cpp floor.cpp scheduler.cpp elevator.cpp -lpthread"
+- "./a"
 
 ## Components
 ### Elevator
