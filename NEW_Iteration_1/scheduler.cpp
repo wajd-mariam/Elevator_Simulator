@@ -9,29 +9,30 @@
 extern std::atomic<int> pendingRequests;
 extern std::atomic<bool> stopThreads; 
 
-// Queue for sending request from Scheduler to Elevator
+// Queue for sending requests from Scheduler to Elevator
 std::queue<FloorRequest> schedulerToElevator;
 std::mutex mtxSchedulerToElevator;
 std::condition_variable cvSchedulerToElevator;
 
-// Queue for sending request from Elevator to Scheduler
+// Queue for sending requests from Elevator to Scheduler
 std::queue<FloorRequest> elevatorToScheduler;
 std::mutex mtxElevatorToScheduler;
 std::condition_variable cvElevatorToScheduler;
 
-// Queue for sending request from Scheduler to Floor
+// Queue for sending requests from Scheduler to Floor
 std::queue<FloorRequest> schedulerToFloor;
 std::mutex mtxSchedulerToFloor;
 std::condition_variable cvSchedulerToFloor;
 
 /**
- * @brief Continuously processes requests from the Floor subsystem and sends them to the Elevator subsystem.
+ * @brief Continuously processes requests from the Floor subsystem and forwards them to the Elevator subsystem.
  * 
- * - Waits for new requests from the Floor subsystem (stored in `floorToScheduler` queue).
- * - Forwards requests to the Elevator subsystem (stored in `schedulerToElevator` queue).
- * - Waits for the Elevator to complete the request (`elevatorToScheduler` queue).
- * - Notifies the Floor once the request is completed.
- * - Terminates when all requests have been processed using global variables ('pendingRequests' & 'stopThreads')
+ * Workflow:
+ * 1. Waits for new requests from the Floor subsystem (stored in `floorToScheduler` queue).
+ * 2. Forwards requests to the Elevator subsystem (stored in `schedulerToElevator` queue).
+ * 3. Waits for the Elevator to complete the request (`elevatorToScheduler` queue).
+ * 4. Notifies the Floor once the request is completed.
+ * 5. Terminates when all requests have been processed using global variables ('pendingRequests' & 'stopThreads')
  */
 void Scheduler::processFloorRequests() {
     while (true) {
