@@ -30,7 +30,6 @@ Floor::Floor(int n, const std::string& file) : floorNumber(n), filename(file) {
  *
  * @param std::string& The name of the input file.
  */
-// Read input data and store requests in a 'FloorRequest' struct:
 void Floor::readInputFile(const std::string& filename) {
     // Opening a file
     std::ifstream file(filename);
@@ -61,7 +60,6 @@ void Floor::readInputFile(const std::string& filename) {
  * 
  * @return A FloorRequest object containing all data of a floor request
  */
-// Parses a request line into a FloorRequest object
 FloorRequest Floor::parseRequest(const std::string& line) {
     std::istringstream iss(line);
     std::string timeStamp, direction;
