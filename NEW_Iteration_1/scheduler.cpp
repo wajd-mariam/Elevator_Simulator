@@ -35,12 +35,14 @@ std::condition_variable cvSchedulerToFloor;
  */
 void Scheduler::processFloorRequests() {
     while (true) {
+        // Acquiring lock to access critical section ('floorToScheduler' queue) after Elevator proccessed a request:
         std::unique_lock<std::mutex> lock(mtxFloorToScheduler);
         // Wait until a new request to be added from the Floor thread
         cvFloorToScheduler.wait(lock, [] { return !floorToScheduler.empty(); }); 
 
-        std::cout << "[Scheduler] Processing request..." << std::endl;
-        // Retrieve the request from the queue
+        // Acquiring lock to access critical section after Floor added a new request:
+        std::cout << "[Scheduler] Received request..." << std::endl;
+        // Retrieve the request from the `floorToScheduler` queue:
         FloorRequest request = floorToScheduler.front();
         floorToScheduler.pop();  // Pop first element from "floorToScheduler" queue
         lock.unlock();
@@ -57,26 +59,31 @@ void Scheduler::processFloorRequests() {
         // Creating a new FloorRequest object 
         FloorRequest newRequest(request.timeStamp, request.floor, request.direction, request.destination);
 
-        // Forward request to Elevator
+        // Forward request to Elevator using "schedulerToElevator" shared queue
         {
             std::lock_guard<std::mutex> lock(mtxSchedulerToElevator);
             schedulerToElevator.push(newRequest);
         }
+        // Notifying Elevator of Scheduler forwarding requests to it.
         cvSchedulerToElevator.notify_one();
         std::cout << "[Scheduler] Sent request to Elevator queue" << std::endl;
         
-        // Wait for Elevator confirmation before processing the next request
+        // Acquiring lock to access critical section ('elevatorToScheduler' queue) after Elevator proccessed a request:
         std::unique_lock<std::mutex> lockElevator(mtxElevatorToScheduler);
+        // Wait for Elevator confirmation before processing the next request
         cvElevatorToScheduler.wait(lockElevator, [] { return !elevatorToScheduler.empty(); });
 
-        // Retrieve the completed request from elevator and popping it from elevatorToScheduler queue:
+        // Retrieve the completed request from elevator and popping it from 'elevatorToScheduler' queue:
         FloorRequest completedRequest = elevatorToScheduler.front();
         elevatorToScheduler.pop();
         std::cout << "[Scheduler] Elevator completed request: Floor " << completedRequest.floor
                 << " -> Destination " << completedRequest.destination << std::endl;
-            
+        
+        // Forwarding completed request by Elevator to Floor subsystem
         {
+            // Acquiring lock to access critical section ('schedulerToFloor' queue):
             std::lock_guard<std::mutex> lock(mtxSchedulerToFloor);
+            // Adding the completed request to the queue
             schedulerToFloor.push(completedRequest);
         }
 
