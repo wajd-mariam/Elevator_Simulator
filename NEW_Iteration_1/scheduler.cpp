@@ -5,7 +5,7 @@
 #include <atomic>
 #include <chrono> 
 
-// Global counter of pending requests:
+// Global variables used to control program terminiation:
 extern std::atomic<int> pendingRequests;
 extern std::atomic<bool> stopThreads; 
 
@@ -22,7 +22,7 @@ std::condition_variable cvElevatorToScheduler;
 // Queue for sending requests from Scheduler to Floor
 std::queue<FloorRequest> schedulerToFloor;
 std::mutex mtxSchedulerToFloor;
-std::condition_variable cvSchedulerToFloor;
+std::condition_variable cvSchedulerToFloor; 
 
 /**
  * @brief Continuously processes requests from the Floor subsystem and forwards them to the Elevator subsystem.
@@ -65,7 +65,7 @@ void Scheduler::processFloorRequests() {
             std::lock_guard<std::mutex> lock(mtxSchedulerToElevator);
             schedulerToElevator.push(newRequest);
         }
-        // Notifying Elevator of Scheduler forwarding requests to it.
+        // Notifying Elevator of new forwarded requests from Scheduler
         cvSchedulerToElevator.notify_one();
         std::cout << "[Scheduler] Sent request to Elevator queue" << std::endl;
         

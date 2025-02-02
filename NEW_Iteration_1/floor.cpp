@@ -2,7 +2,7 @@
 #include "scheduler.h"
 #include <atomic>
 
-// Global counter of pending requests:
+// Global variable used to control program terminiation:
 extern std::atomic<int> pendingRequests;
 
 // Queue for sending requests from Floor to Scheduler

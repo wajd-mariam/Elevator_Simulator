@@ -13,13 +13,13 @@
 #include <random>
 #include "FloorRequest.h"
 
-// Shared queue for communication 
-// Floor -> Scheduler
+// Shared queues for communication 
+// Queue for sending requests from Floor -> Scheduler
 extern std::queue<FloorRequest> floorToScheduler;    
 extern std::mutex mtxFloorToScheduler; 
 extern std::condition_variable cvFloorToScheduler;
 
-// Scheduler -> Floor
+// Queue for sending requests from Scheduler -> Floor
 extern std::queue<FloorRequest> schedulerToFloor;
 extern std::mutex mtxSchedulerToFloor;
 extern std::condition_variable cvSchedulerToFloor;
@@ -27,6 +27,7 @@ extern std::condition_variable cvSchedulerToFloor;
 class Floor {
 private:
     int floorNumber;
+    // Vector array to store "FloorRequest" object
     std::vector<FloorRequest> requests;
     std::string filename;
 
