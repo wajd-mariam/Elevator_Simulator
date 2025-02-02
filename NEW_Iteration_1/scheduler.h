@@ -24,8 +24,17 @@ extern std::condition_variable cvSchedulerToFloor;
 
 class Scheduler {
 public:
+    /**
+     * @brief Continuously processes requests from the Floor subsystem and forwards them to the Elevator subsystem.
+     * 
+     * Workflow:
+     * 1. Waits for new requests from the Floor subsystem (stored in `floorToScheduler` queue).
+     * 2. Forwards requests to the Elevator subsystem (stored in `schedulerToElevator` queue).
+     * 3. Waits for the Elevator to complete the request (`elevatorToScheduler` queue).
+     * 4. Notifies the Floor once the request is completed.
+     * 5. Terminates when all requests have been processed using global variables ('pendingRequests' & 'stopThreads')
+     */
     void processFloorRequests();
-    void processElevatorArrivals();
 };
 
 #endif // SCHEDULER_H

@@ -102,6 +102,5 @@ void Scheduler::processFloorRequests() {
             cvElevatorToScheduler.notify_all();
             return; // Terminiating Scheduler thread when all requests were processed
         }
-        
     }
 };
