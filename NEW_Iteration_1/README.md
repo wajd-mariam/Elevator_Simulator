@@ -44,7 +44,7 @@ Date: February 1st, 2025
 - main.cpp: program where all threads communicate
 
 ## Responsibilities
-Wajd Mariam-> Floor.cpp
-Albert Robu-> Scheduler.cpp
-Azan Huggins Goolamallee-> Elevator.cpp
-Sam Nieuwenhuis -> UML diagrams
+- Wajd Mariam-> Floor.cpp
+- Albert Robu-> Scheduler.cpp
+- Azan Huggins Goolamallee-> Elevator.cpp
+- Sam Nieuwenhuis -> UML diagrams
