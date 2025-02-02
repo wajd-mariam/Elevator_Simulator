@@ -19,7 +19,7 @@ extern std::queue<FloorRequest> floorToScheduler;
 extern std::mutex mtxFloorToScheduler; 
 extern std::condition_variable cvFloorToScheduler;
 
-// Scheduler ->  Floor
+// Scheduler -> Floor
 extern std::queue<FloorRequest> schedulerToFloor;
 extern std::mutex mtxSchedulerToFloor;
 extern std::condition_variable cvSchedulerToFloor;
@@ -37,9 +37,7 @@ public:
     // Methods
     void readInputFile(const std::string& filename);
     FloorRequest parseRequest(const std::string& line);
-    void printAllRequests(); // DEBUGGING
     void sendRequestsToScheduler();
-    void listenForElevatorArrival();
 };
 
 #endif // FLOOR_H
