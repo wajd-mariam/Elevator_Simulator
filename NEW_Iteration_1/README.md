@@ -11,7 +11,7 @@ Samuel Nieuwenhuis 101225633
 
 This project is meant to create and begin testing a program specifically for elevator simulation. This is done by using 3 subsystems, the floor that people press the button to request an elevator, the elevator itself, and the scheduler which is used to mediate between the two
 
-Date: February 1st
+Date: February 1st, 2025
 
 ## Setup:
 1) Ensure having C++11 compiler and pthread library installed
@@ -23,18 +23,18 @@ Date: February 1st
 - "./app"
 
 ## Components
-### Elevator
-- elevator.cpp: Holds class and functions dedicated to the elevator subclass
-- elevator.h: Holds all definitions of fuctions and class of elevator subclass
-
-### Floor
+### Floor Subsystem
 - floor.cpp: Holds class and functions dedicated to the floor subclass
 - floor.h: Holds all definitions of functions and class of floor subclass
 - FloorRequests.h: Holds FloorRequests structure
 
-### scheduler
+### Scheduler Subsystem
 - scheduler.cpp: Holds class and functions dedicated to the scheduler subclass
 - scheduler.h: Holds all definitions of functions and class of scheduler subclass
+
+### Elevator Subsystem
+- elevator.cpp: Holds class and functions dedicated to the elevator subclass
+- elevator.h: Holds all definitions of fuctions and class of elevator subclass
 
 ### test
 - input.txt: Input file that holds the time, floor, direction, and destination of the people trying to use the elevator
