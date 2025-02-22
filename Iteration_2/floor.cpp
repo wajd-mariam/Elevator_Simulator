@@ -1,13 +1,8 @@
 #include "floor.h"
-#include "scheduler.h"
-#include <atomic>
+#include <fstream>
+#include <sstream>
+#include <iostream>
 #include "globals.h"
-
-// Queue for sending requests from Floor to Scheduler
-std::queue<FloorRequest> floorToScheduler; 
-std::mutex mtxFloorToScheduler;            
-std::condition_variable cvFloorToScheduler;
-
 
 /**
  * @brief Constructs a Floor object and initializes its default data.
@@ -18,7 +13,7 @@ std::condition_variable cvFloorToScheduler;
  * @param file The name of the input file containing floor requests.
  */
 Floor::Floor(int n, const std::string& file) : floorNumber(n), filename(file) {
-    this->readInputFile("input.txt"); // Read requests during initialization
+    this->readInputFile(filename); // Read requests during initialization
 }
 
 
@@ -34,13 +29,14 @@ void Floor::readInputFile(const std::string& filename) {
 
     // If file does not exist -> ERROR
     if (!file) {
-        std::cerr << "Error: Could not open input file!" << std::endl;
+        std::cerr << "[Floor] Error: Could not open input file!" << std::endl;
         return;
     }
 
     std::string line;
     // Reading file line by line and storing input in "FloorRequest" struct
     while (std::getline(file, line)) {
+        if (line.empty()) continue;
         FloorRequest request = parseRequest(line);
         this->requests.push_back(request);
         pendingRequests++; // Incrementing requests
@@ -83,25 +79,42 @@ FloorRequest Floor::parseRequest(const std::string& line) {
  * 5. Print confirmation before proceeding to the next request.
  */
 void Floor::sendRequestsToScheduler() {
-    for (const FloorRequest& req : this->requests) {
-        std::cout << "[Floor] Sending request to Scheduler:" << std::endl;
+    for (const FloorRequest &req : requests) {
+        std::cout << "[Floor] Sending request to Scheduler: "
+                  << req.timeStamp << " Floor " << req.floor << " "
+                  << req.direction << " -> " << req.destination << std::endl;
+
+        // 1) Push to floorToScheduler
         {
-            std::lock_guard<std::mutex> lock(mtxFloorToScheduler);
+            std::lock_guard<std::mutex> lk(mtxFloorToScheduler);
             floorToScheduler.push(req);
         }
-        // Notifying Scheduler thread after adding a "FloorRequest" object into "floorToScheduler" shared queue
-        cvFloorToScheduler.notify_one(); 
+        // 2) Notify scheduler that we have a new request
+        cvFloorToScheduler.notify_all();
 
-        // Wait for aknowledgment from Scheduler before sending the next request
-        std::unique_lock<std::mutex> lock(mtxSchedulerToFloor);
-        cvSchedulerToFloor.wait(lock, [] { return !schedulerToFloor.empty(); });
-
-        // After recieving aknowledgement -> pop the FloorRequest from "schedulerToFloor" shared queue
-        // NOTE: this request has been processed by the elevator
-        FloorRequest processedRequest = schedulerToFloor.front();
-        schedulerToFloor.pop();
-        std::cout << "[Floor] Acknowledgment received for request: Floor " << processedRequest.floor
-                  << " -> Destination " << processedRequest.destination << std::endl;
-        std::cout << "" << std::endl;
+        // 3) Wait for ack from Scheduler->Floor
+        {
+            std::unique_lock<std::mutex> lk(mtxSchedulerToFloor);
+            cvSchedulerToFloor.wait(lk, [] {
+                return !schedulerToFloor.empty() || stopThreads;
+            });
+            if (stopThreads && schedulerToFloor.empty()) {
+                break;
+            }
+            FloorRequest doneReq = schedulerToFloor.front();
+            schedulerToFloor.pop();
+            std::cout << "[Floor] Acknowledgment received for request: Floor "
+                      << doneReq.floor << " -> " << doneReq.destination << "\n\n";
+        }
     }
+
+    // Done with requests
+    std::cout << "[Floor] Done sending all requests. Setting stopThreads = true.\n";
+    stopThreads = true;
+
+    // Unblock any waiting threads
+    cvFloorToScheduler.notify_all();
+    cvSchedulerToElevator.notify_all();
+    cvElevatorToScheduler.notify_all();
+    cvSchedulerToFloor.notify_all();
 }

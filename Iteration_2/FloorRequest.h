@@ -13,14 +13,15 @@
  * 4. The destination floor where the user wants to go.
  */
 struct FloorRequest {
-    std::string type;
+    // std::string type;
     std::string timeStamp; // Time of request
     int floor;             // Source floor
     std::string direction; // "Up" or "Down"
     int destination;       // Target floor
 
     // Default constructor
-    FloorRequest() : type(""), floor(0), direction(""), destination(0) {}
+    FloorRequest()
+        : timeStamp(""), floor(0), direction(""), destination(0) {}
 
     /**
      * @brief Constructs a FloorRequest object with given parameters.

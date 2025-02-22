@@ -1,16 +1,15 @@
 #include <iostream>
 #include <thread>
 #include <string>
-#include <atomic>
 #include "floor.h"
 #include "scheduler.h"
 #include "elevator.h"
 #include "globals.h"
 
-// Tracking number of pending requests:
-std::atomic<int> pendingRequests(0);
-// Boolean variable used to terminate threads
-std::atomic<bool> stopThreads(false);
+// // Tracking number of pending requests:
+// std::atomic<int> pendingRequests(0);
+// // Boolean variable used to terminate threads
+// std::atomic<bool> stopThreads(false);
 
 int main() {
     std::string filename = "input.txt";
@@ -31,6 +30,6 @@ int main() {
     elevatorThread.join();
 
     // This statement runs after processing all requests:
-    std::cout << "Program terminated successfully." << std::endl;
+    std::cout << "\n[main] Program terminated successfully." << std::endl;
     return 0;
 }

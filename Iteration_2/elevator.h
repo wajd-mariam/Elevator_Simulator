@@ -1,44 +1,27 @@
 #ifndef ELEVATOR_H
 #define ELEVATOR_H
 
-#include "floor.h"
-#include <iostream>
-#include <vector>
-#include <string>
-#include <chrono>
-#include <thread>
-#include <random>
-#include <atomic>
-#include <queue>
-#include <mutex>
+#include <cmath>
 #include <condition_variable>
-#include <list>
-#include <deque>
 #include "FloorRequest.h"
 
-enum class ElevatorState{
-    WAIT_FOR_SCHEDULER,
-    RECEIVE_INSTRUCTIONS,
-    UNPACK_INSTRUCTIONS,
-    CLOSE_DOORS,
-    MOVING_TO_FLOOR,
-    SEND_FEEDBACK_TO_SCHEDULER,
-    OPEN_DOORS
+enum class ElevatorState {
+    WAIT_FOR_SCHEDULER         = 0,
+    RECEIVE_INSTRUCTIONS       = 1,
+    CLOSE_DOORS                = 3,
+    MOVING_TO_FLOOR            = 4,
+    SEND_FEEDBACK_TO_SCHEDULER = 5,
+    OPEN_DOORS                 = 6,
+    STOPPED                    = 7
 };
 
 class Elevator {
 private:
-    bool elevatorMoving; //says when elevator
-                        //indicates when a new task can be inputted
-                        //can be inputted when not moving essentially (will be patched late4r)
-    int floorAt; // indicates the floor number the elevator is located on
-                // used to tell if its going in the proper direction 
-    int floorGoingTo; // loaded in by scheduler
+    ElevatorState currentState {ElevatorState::WAIT_FOR_SCHEDULER};
+    int currentFloor {1};
+    bool doorsOpen {true};
+    int floorMovementSpeed {500};
 
-    //Added for testing
-    ElevatorState currentState{ElevatorState::WAIT_FOR_SCHEDULER};
-    bool doorsOpen{true};
-    int currentFloor{1};
 
 public:
     /**

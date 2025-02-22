@@ -9,12 +9,12 @@
 
 // Define the states of the Scheduler
 enum class SchedulerState {
-    WAIT_FOR_REQUEST,
-    PROCESS_REQUEST,
-    SEND_TO_ELEVATOR,
-    WAIT_FOR_ELEVATOR,
-    NOTIFY_FLOOR,
-    TERMINATE
+    WAIT_FOR_REQUEST = 0,
+    PROCESS_REQUEST  = 1,
+    SEND_TO_ELEVATOR = 2,
+    WAIT_FOR_ELEVATOR= 3,
+    NOTIFY_FLOOR     = 4,
+    TERMINATE        = 5
 };
 
 

@@ -1,16 +1,8 @@
 #ifndef FLOOR_H
 #define FLOOR_H
 
-#include <iostream>
-#include <fstream>
-#include <thread>
+#include <string>
 #include <vector>
-#include <sstream>
-#include <queue>
-#include <mutex>
-#include <chrono>
-#include <condition_variable>
-#include <random>
 #include "FloorRequest.h"
 
 
