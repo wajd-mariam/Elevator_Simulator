@@ -264,22 +264,16 @@ TEST(SystemTest, FullFlowNoMovement) {
     clearGlobalQueues();
 }
 
-/**
- * New test that runs the full code with input.txt.
- * We'll create a few lines in "input.txt" and let Floor read from it normally.
- */
 TEST(SystemTest, FullFlowFromFile) {
     clearGlobalQueues();
     std::string testFile = "input.txt";
-    {
-        std::ofstream testOutput(testFile);
-        if (testOutput) {
-            testOutput << "14:01:01.0 1 Up 3\n"
-                       << "14:02:02.0 3 Down 1\n";
-        }
-    }
 
-    // 2 lines => pendingRequests after readInputFile will be 2
+    // Ensure the file exists
+    std::ifstream fileCheck(testFile);
+    EXPECT_TRUE(fileCheck.good()) << "Error: input.txt does not exist!";
+    fileCheck.close();
+
+    // Use input.txt as expected, without modifying its contents
     Floor floorObj(1, testFile);
     Scheduler schedulerObj;
     Elevator elevatorObj;
