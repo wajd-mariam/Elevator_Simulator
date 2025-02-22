@@ -1,20 +1,7 @@
 #include "elevator.h"
 #include "scheduler.h"
 #include <atomic>
-
-// Global variables used to control program terminiation:
-extern std::atomic<int> pendingRequests;
-extern std::atomic<bool> stopThreads;
-  
-enum class ElevatorState{
-    WAIT_FOR_SCHEDULER,
-    RECEIVE_INSTRUCTIONS,
-    UNPACK_INSTRUCTIONS,
-    CLOSE_DOORS,
-    MOVING_TO_FLOOR,
-    SEND_FEEDBACK_TO_SCHEDULER,
-    OPEN_DOORS
-};
+#include "globals.h"
 
 /**
  * @brief Continuously processes elevator requests from the Scheduler.
@@ -52,6 +39,7 @@ void Elevator::processRequests() {
             }
 
             case ElevatorState::RECEIVE_INSTRUCTIONS: {
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
                 // Retrieve the request from the schedulerToElevator queue
                 request = schedulerToElevator.front();
                 schedulerToElevator.pop(); // Pop first element from "schedulerToElevator" queue
@@ -76,7 +64,7 @@ void Elevator::processRequests() {
 
             case ElevatorState::CLOSE_DOORS: { 
                 std::cout << "[Elevator] Doors closing..." << std::endl;
-                std::this_thread::sleep_for(std::chrono::seconds(4));
+                //std::this_thread::sleep_for(std::chrono::seconds(4));
                 currentState = ElevatorState::MOVING_TO_FLOOR;
                 break;
             }
@@ -86,7 +74,7 @@ void Elevator::processRequests() {
                 std::cout << "[Elevator] Moving from Floor " << request.floor
                 << " to Destination " << request.destination
                 << " (Direction: " << request.direction << ")" << std::endl;
-                std::this_thread::sleep_for(std::chrono::seconds(6));
+                //std::this_thread::sleep_for(std::chrono::seconds(6));
                 currentState = ElevatorState::MOVING_TO_FLOOR;               
             }
 
@@ -105,7 +93,7 @@ void Elevator::processRequests() {
 
             case ElevatorState::OPEN_DOORS: {
                 std::cout << "[Elevator] Doors opening..." << std::endl;
-                std::this_thread::sleep_for(std::chrono::seconds(4));
+                //std::this_thread::sleep_for(std::chrono::seconds(4));
                 currentState = ElevatorState::WAIT_FOR_SCHEDULER; // Reset state
                 break;
             }

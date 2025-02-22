@@ -5,6 +5,7 @@
 #include "floor.h"
 #include "scheduler.h"
 #include "elevator.h"
+#include "globals.h"
 
 // Tracking number of pending requests:
 std::atomic<int> pendingRequests(0);

@@ -16,25 +16,29 @@
 #include <deque>
 #include "FloorRequest.h"
 
-// Queue for sending requests from Scheduler -> Elevator
-extern std::queue<FloorRequest> schedulerToElevator;
-extern std::mutex mtxSchedulerToElevator;
-extern std::condition_variable cvSchedulerToElevator;
-
-// Queue for sending requests from Elevator -> Scheduler
-extern std::queue<FloorRequest> elevatorToScheduler;
-extern std::mutex mtxElevatorToScheduler;
-extern std::condition_variable cvElevatorToScheduler;
+enum class ElevatorState{
+    WAIT_FOR_SCHEDULER,
+    RECEIVE_INSTRUCTIONS,
+    UNPACK_INSTRUCTIONS,
+    CLOSE_DOORS,
+    MOVING_TO_FLOOR,
+    SEND_FEEDBACK_TO_SCHEDULER,
+    OPEN_DOORS
+};
 
 class Elevator {
 private:
     bool elevatorMoving; //says when elevator
                         //indicates when a new task can be inputted
                         //can be inputted when not moving essentially (will be patched late4r)
-    bool doorsOpen; // for later use
     int floorAt; // indicates the floor number the elevator is located on
                 // used to tell if its going in the proper direction 
     int floorGoingTo; // loaded in by scheduler
+
+    //Added for testing
+    ElevatorState currentState{ElevatorState::WAIT_FOR_SCHEDULER};
+    bool doorsOpen{true};
+    int currentFloor{1};
 
 public:
     /**
@@ -52,6 +56,11 @@ public:
      * 5. Notify the Scheduler that the request has been completed.
      */
     void processRequests();
+
+    // Testing methods - added specifically for testing state transitions
+    ElevatorState getCurrentState() const { return currentState; }
+    bool getDoorsOpen() const { return doorsOpen; }
+    int getCurrentFloor() const { return currentFloor; }
 };
 
 #endif // ELEVATOR_H

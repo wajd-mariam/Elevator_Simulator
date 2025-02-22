@@ -1,9 +1,7 @@
 #include "floor.h"
 #include "scheduler.h"
 #include <atomic>
-
-// Global variable used to control program terminiation:
-extern std::atomic<int> pendingRequests;
+#include "globals.h"
 
 // Queue for sending requests from Floor to Scheduler
 std::queue<FloorRequest> floorToScheduler; 

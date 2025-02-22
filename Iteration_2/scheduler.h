@@ -7,22 +7,27 @@
 #include <condition_variable>
 #include "FloorRequest.h"
 
-// Queue for sending requests from Scheduler -> Elevator
-extern std::queue<FloorRequest> schedulerToElevator;
-extern std::mutex mtxSchedulerToElevator;
-extern std::condition_variable cvSchedulerToElevator;
+// Define the states of the Scheduler
+enum class SchedulerState {
+    WAIT_FOR_REQUEST,
+    PROCESS_REQUEST,
+    SEND_TO_ELEVATOR,
+    WAIT_FOR_ELEVATOR,
+    NOTIFY_FLOOR,
+    TERMINATE
+};
 
-// Queue for sending requests from Elevator -> Scheduler
-extern std::queue<FloorRequest> elevatorToScheduler;
-extern std::mutex mtxElevatorToScheduler;
-extern std::condition_variable cvElevatorToScheduler;
 
-// Queue for sending requests from Scheduler -> Floor
-extern std::queue<FloorRequest> schedulerToFloor;
-extern std::mutex mtxSchedulerToFloor;
-extern std::condition_variable cvSchedulerToFloor;
+//Added for testing
+//extern std::queue<FloorRequest> floorToScheduler;
+//extern std::mutex mtxFloorToScheduler;
+//extern std::condition_variable cvFloorToScheduler;
 
 class Scheduler {
+private:
+    //Added for testing
+    SchedulerState currentState{SchedulerState::WAIT_FOR_REQUEST};
+
 public:
     /**
      * @brief Continuously processes requests from the Floor subsystem and forwards them to the Elevator subsystem.
@@ -35,6 +40,9 @@ public:
      * 5. Terminates when all requests have been processed using global variables ('pendingRequests' & 'stopThreads')
      */
     void processFloorRequests();
+
+    //Added for testing
+    SchedulerState getCurrentState() const { return currentState;}
 };
 
 #endif // SCHEDULER_H

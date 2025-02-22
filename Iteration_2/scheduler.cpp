@@ -4,10 +4,7 @@
 #include <thread>
 #include <atomic>
 #include <chrono> 
-
-// Global variables used to control program terminiation:
-extern std::atomic<int> pendingRequests;
-extern std::atomic<bool> stopThreads; 
+#include "globals.h"
 
 // Queue for sending requests from Scheduler to Elevator
 std::queue<FloorRequest> schedulerToElevator;
@@ -22,17 +19,12 @@ std::condition_variable cvElevatorToScheduler;
 // Queue for sending requests from Scheduler to Floor
 std::queue<FloorRequest> schedulerToFloor;
 std::mutex mtxSchedulerToFloor;
-std::condition_variable cvSchedulerToFloor; 
+std::condition_variable cvSchedulerToFloor;
 
-// Define the states of the Scheduler
-enum class SchedulerState {
-    WAIT_FOR_REQUEST,
-    PROCESS_REQUEST,
-    SEND_TO_ELEVATOR,
-    WAIT_FOR_ELEVATOR,
-    NOTIFY_FLOOR,
-    TERMINATE
-};
+//Added for testing
+//std::queue<FloorRequest> floorToScheduler;
+//std::mutex mtxFloorToScheduler;
+//std::condition_variable cvFloorToScheduler;
 
 /**
  * @brief Continuously processes requests from the Floor subsystem and forwards them to the Elevator subsystem.
@@ -73,7 +65,7 @@ void Scheduler::processFloorRequests() {
                           << ", Floor: " << request.floor
                           << ", Direction: " << request.direction
                           << ", Destination: " << request.destination << std::endl;
-                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                //std::this_thread::sleep_for(std::chrono::milliseconds(500));
                 currentState = SchedulerState::SEND_TO_ELEVATOR;
                 break;
             }
