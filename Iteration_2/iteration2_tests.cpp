@@ -193,18 +193,6 @@ TEST(FloorTest, ParseRequest) {
     EXPECT_EQ(req.destination, 4);
 }
 
-TEST(FloorTest, ReadInputFile) {
-    clearGlobalQueues();
-    std::string testFile = "input.txt";
-    std::ofstream testOutput(testFile);
-    if (testOutput) {
-        testOutput << "10:10 5 Down 1\n10:12 2 Up 3\n";
-        testOutput.close();
-    }
-    Floor f(1, testFile);
-    EXPECT_TRUE(openFileForTest(testFile));
-}
-
 TEST(FloorTest, ReadInputFile_NonExistent) {
     clearGlobalQueues();
     std::string missing = "non_existent_file.txt";

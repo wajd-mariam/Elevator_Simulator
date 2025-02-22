@@ -108,9 +108,23 @@ void Floor::sendRequestsToScheduler() {
         }
     }
 
-    // Done with requests
-    std::cout << "[Floor] Done sending all requests. Setting stopThreads = true.\n";
-    stopThreads = true;
+    while (!stopThreads) {
+        std::unique_lock<std::mutex> lk(mtxSchedulerToFloor);
+        cvSchedulerToFloor.wait(lk, [] {
+            return !schedulerToFloor.empty() || stopThreads;
+        });
+        if (!schedulerToFloor.empty()) {
+            FloorRequest doneReq = schedulerToFloor.front();
+            schedulerToFloor.pop();
+            std::cout << "[Floor] Acknowledgment (post-file) for request: Floor "
+                      << doneReq.floor << " -> " << doneReq.destination << std::endl;
+        }
+        if (stopThreads) break;
+    }
+
+    // // Done with requests
+    // std::cout << "[Floor] Done sending all requests. Setting stopThreads = true.\n";
+    // stopThreads = true;
 
     // Unblock any waiting threads
     cvFloorToScheduler.notify_all();
