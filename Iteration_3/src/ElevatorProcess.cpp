@@ -1,13 +1,16 @@
+/* ElevatorProcess.cpp - Controls elevator movement and communication with the scheduler */
 #include "Common.h"
 
+// Enum representing different states of the elevator
 enum class ElevatorState {
-    WAIT_FOR_SCHEDULER,
-    RECEIVE_INSTRUCTIONS,
-    MOVING_TO_FLOOR,
-    SEND_FEEDBACK,
-    STOPPED
+    WAIT_FOR_SCHEDULER,     // Waiting for a request from the scheduler
+    RECEIVE_INSTRUCTIONS,   // Received and processing instructions
+    MOVING_TO_FLOOR,        // Elevator is in motion
+    SEND_FEEDBACK,          // Sending completion message to the scheduler
+    STOPPED                 // Elevator is stopped
 };
 
+// Global variables for elevator status and communication
 static std::atomic<bool> stopAll(false);
 static std::queue<FloorRequest> elevatorQueue;
 static std::mutex mtxElev;
@@ -19,11 +22,12 @@ static int sendSock=-1;
 static int currentFloor=1;
 static bool doorsOpen=true;
 static ElevatorState eState=ElevatorState::WAIT_FOR_SCHEDULER;
-static int movementSpeed=500;
+static int movementSpeed=500; // Simulated time for movement
 
 static std::string schedIP;
 static int schedPort=0; // Send completions to schedPort+100
 
+// Thread to listen for incoming requests from the scheduler
 void elevatorListenerThread(){
     while(!stopAll){
         std::string ip; int p;
@@ -38,23 +42,28 @@ void elevatorListenerThread(){
     }
 }
 
+// Function to handle elevator movement logic
 static void doMovementLogic(const FloorRequest &req){
     if(doorsOpen){
         doorsOpen=false;
         std::cout<<"[Elevator "<<elevatorID<<"] Doors closing.\n";
         simulateSleepMs(300);
     }
+    // Move to requested floor
     int dist=std::abs(currentFloor-req.floor);
     if(dist>0){
         std::cout<<"[Elevator "<<elevatorID<<"] Moving from "<<currentFloor<<" to "<<req.floor<<"\n";
         simulateSleepMs(dist*movementSpeed);
         currentFloor=req.floor;
     }
+
+    // Open and close doors before moving to destination
     std::cout<<"[Elevator "<<elevatorID<<"] Doors opening.\n";
     doorsOpen=true; simulateSleepMs(300);
     std::cout<<"[Elevator "<<elevatorID<<"] Doors closing.\n";
     doorsOpen=false;simulateSleepMs(300);
 
+    // Move to the final destination
     dist=std::abs(currentFloor-req.destination);
     if(dist>0){
         std::cout<<"[Elevator "<<elevatorID<<"] Moving from "<<currentFloor
@@ -66,6 +75,7 @@ static void doMovementLogic(const FloorRequest &req){
     doorsOpen=true; simulateSleepMs(300);
 }
 
+// Elevator main loop - waits for requests and processes them
 void elevatorMainLoop(){
     bool running=true;
     FloorRequest currentReq;
@@ -112,24 +122,31 @@ void elevatorMainLoop(){
     }
 }
 
+// Main function - initializes elevator process and starts event loop
 int main(int argc,char* argv[]){
+    // Ensure correct usage format
     // Usage: ./ElevatorProcess <listenPort> <elevatorID> <schedulerIP> <schedulerPort>
     if(argc<5){
         std::cerr<<"Usage: "<<argv[0]<<" <listenPort> <elevatorID> <schedulerIP> <schedulerPort>\n";
         return 1;
     }
-    int myPort       = std::stoi(argv[1]);
-    elevatorID       = std::stoi(argv[2]);
-    schedIP          = argv[3];
-    schedPort        = std::stoi(argv[4]);
+    int myPort       = std::stoi(argv[1]); // Port for receiving requests
+    elevatorID = std::stoi(argv[2]); // Elevator identifier
+    schedIP = argv[3];               // Scheduler IP address
+    schedPort = std::stoi(argv[4]);  // Scheduler port
 
+    // Create sockets for communication
     listenSock=createBoundSocket(myPort);
     if(listenSock<0)return 1;
     sendSock=socket(AF_INET,SOCK_DGRAM,0);
 
+    // Start listener thread to receive scheduler instructions
     std::thread thr(elevatorListenerThread);
+
+    // Start the main elevator processing loop
     elevatorMainLoop();
 
+    // Cleanup before exiting
     stopAll=true;
     thr.join();
     close(listenSock);

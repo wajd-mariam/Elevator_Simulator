@@ -1,5 +1,7 @@
+/* SchedulerProcess.cpp - Manages elevator scheduling and request handling */
 #include "Common.h"
 
+// Enum representing different scheduler states
 enum class SchedulerState {
     WAIT_FOR_REQUEST,
     PROCESS_REQUEST,
@@ -10,13 +12,14 @@ enum class SchedulerState {
     TERMINATE
 };
 
+// Structure to hold elevator status information
 struct ElevatorStatus {
     int id;
     int currentFloor;
 };
 
+// Global flags and data structures for synchronization
 static std::atomic<bool> stopAll(false);
-
 static std::queue<FloorRequest> floorRequests;
 static std::mutex mtxFloor;
 static std::condition_variable cvFloor;
@@ -33,6 +36,7 @@ static int sendSock=-1;
 static int floorPort=0;
 static int schedPort=0;
 
+// Thread to listen for floor requests
 void floorListenerThread(){
     while(!stopAll){
         std::string ip; int p;
@@ -46,6 +50,8 @@ void floorListenerThread(){
         cvFloor.notify_all();
     }
 }
+
+// Thread to listen for elevator completions
 void elevatorListenerThread(){
     while(!stopAll){
         std::string ip; int p;
@@ -60,6 +66,7 @@ void elevatorListenerThread(){
     }
 }
 
+// Function to pick the best elevator for a request
 int pickBestElevator(const FloorRequest &r){
     int best=-1; 
     int bestDist=99999;
@@ -74,6 +81,7 @@ int pickBestElevator(const FloorRequest &r){
 }
 
 // Usage: ./SchedulerProcess <schedulerPort> <floorPort> <numElevators>
+// Main function - sets up scheduler and handles requests
 int main(int argc,char* argv[]){
     if(argc<4){
         std::cerr<<"Usage: "<<argv[0]<<" <schedulerPort> <floorPort> <numElevators>\n";
@@ -89,7 +97,7 @@ int main(int argc,char* argv[]){
         elevInfo.push_back(es);
     }
 
-    // floorSock binds on schedPort
+    // Create sockets for communication
     floorSock=createBoundSocket(schedPort);
     if(floorSock<0)return 1;
     // elevatorSock binds on schedPort+100
@@ -97,6 +105,7 @@ int main(int argc,char* argv[]){
     if(elevatorSock<0)return 1;
     sendSock=socket(AF_INET,SOCK_DGRAM,0);
 
+    // Start listener threads
     std::thread flTh(floorListenerThread);
     std::thread elTh(elevatorListenerThread);
 

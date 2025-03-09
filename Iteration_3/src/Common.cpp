@@ -1,10 +1,16 @@
+/* Common.cpp - Contains utility functions for request serialization, UDP communication, and socket handling */
 #include "Common.h"
 
+// Serializes a FloorRequest into a string format: "timestamp|floor|direction|destination"
 std::string serializeRequest(const FloorRequest &fr){
     return fr.timeStamp+"|"+std::to_string(fr.floor)+"|"+fr.direction+"|"+std::to_string(fr.destination);
 }
+
+// Deserializes a string into a FloorRequest object
+// Expected format: "timestamp|floor|direction|destination"
 FloorRequest deserializeRequest(const std::string &s){
     auto p1=s.find("|"); auto p2=s.find("|",p1+1); auto p3=s.find("|",p2+1);
+    // Ensure the string is correctly formatted
     if(p1==std::string::npos||p2==std::string::npos||p3==std::string::npos)
         throw std::runtime_error("Malformed request: "+s);
     FloorRequest fr;
@@ -15,6 +21,7 @@ FloorRequest deserializeRequest(const std::string &s){
     return fr;
 }
 
+// Creates a UDP socket bound to a specific port and returns the socket descriptor
 int createBoundSocket(int port){
     int sock=socket(AF_INET,SOCK_DGRAM,0);
     if(sock<0){
@@ -33,6 +40,7 @@ int createBoundSocket(int port){
     return sock;
 }
 
+// Sends a UDP message to a specific IP and port
 void udpSendString(int sock,const std::string &msg,const std::string &ip,int port){
     sockaddr_in dest; std::memset(&dest,0,sizeof(dest));
     dest.sin_family=AF_INET;
@@ -40,6 +48,8 @@ void udpSendString(int sock,const std::string &msg,const std::string &ip,int por
     inet_pton(AF_INET,ip.c_str(),&dest.sin_addr);
     sendto(sock,msg.c_str(),msg.size(),0,(struct sockaddr*)&dest,sizeof(dest));
 }
+
+// Receives a UDP message, stores the sender's IP and port, and returns the message content
 std::string udpRecvString(int sock,std::string &rip,int &rport){
     char buf[1024];
     sockaddr_in src; socklen_t srclen=sizeof(src);
@@ -53,6 +63,7 @@ std::string udpRecvString(int sock,std::string &rip,int &rport){
     return std::string(buf);
 }
 
+// Simulates a sleep/delay for a specified duration in milliseconds
 void simulateSleepMs(int ms){
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }

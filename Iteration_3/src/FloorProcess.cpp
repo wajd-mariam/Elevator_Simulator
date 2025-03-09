@@ -1,19 +1,23 @@
+/* FloorProcess.cpp - Handles sending floor requests to the scheduler */
 #include "Common.h"
 
 int main(int argc,char* argv[]){
     // Usage: ./FloorProcess <myPort> <schedulerIP> <schedulerPort> input.txt
+    // Ensure correct usage format
     if(argc<5){
         std::cerr<<"Usage: "<<argv[0]<<" <myPort> <schedulerIP> <schedulerPort> <inputFile>\n";
         return 1;
     }
-    int myPort=std::stoi(argv[1]);
-    std::string schedIP=argv[2];
-    int schedPort=std::stoi(argv[3]);
-    std::string file=argv[4];
+    int myPort=std::stoi(argv[1]); // Port this process listens on
+    std::string schedIP=argv[2];   // IP address of the scheduler
+    int schedPort=std::stoi(argv[3]); // Port the scheduler listens on
+    std::string file=argv[4];      // Input file containing floor requests
 
+    // Create a UDP socket bound to the specified port
     int sock=createBoundSocket(myPort);
     if(sock<0)return 1;
 
+    // Open the input file containing floor requests
     std::ifstream in(file);
     if(!in){
         std::cerr<<"Could not open file "<<file<<"\n";
@@ -33,11 +37,13 @@ int main(int argc,char* argv[]){
     in.close();
     std::cout<<"[Floor] Loaded "<<requests.size()<<" requests from "<<file<<"\n";
 
+    // Send each request to the scheduler via UDP
     for(auto &r:requests){
         auto msg=serializeRequest(r);
         std::cout<<"[Floor] Sending request "<<msg<<" to "<<schedIP<<":"<<schedPort<<"\n";
         udpSendString(sock,msg,schedIP,schedPort);
 
+        // Wait for acknowledgment from the scheduler
         std::string ip; int p;
         auto ack=udpRecvString(sock,ip,p);
         if(!ack.empty()){
@@ -48,6 +54,7 @@ int main(int argc,char* argv[]){
     }
     std::cout<<"[Floor] Done sending requests. Listening for extras.\n";
 
+    // Keep listening for late acknowledgments from the scheduler
     while(true){
         std::string ip; int p;
         auto s=udpRecvString(sock,ip,p);
@@ -59,6 +66,6 @@ int main(int argc,char* argv[]){
         simulateSleepMs(500);
     }
 
-    close(sock);
+    close(sock); // Close the socket before exiting
     return 0;
 }
