@@ -6,19 +6,24 @@ int main(int argc,char* argv[]){
         std::cerr<<"Usage: "<<argv[0]<<" <myPort> <schedulerIP> <schedulerPort> <inputFile>\n";
         return 1;
     }
+    // Reading command line arguments
     int myPort=std::stoi(argv[1]);
     std::string schedIP=argv[2];
     int schedPort=std::stoi(argv[3]);
     std::string file=argv[4];
 
+    // Creating and binding UPD socket
     int sock=createBoundSocket(myPort);
     if(sock<0)return 1;
 
+    // Open input file
     std::ifstream in(file);
     if(!in){
         std::cerr<<"Could not open file "<<file<<"\n";
         return 1;
     }
+
+    // Parsing each line from input.txt as FloorRequest struct:
     std::vector<FloorRequest> requests;
     {
         std::string line;
@@ -38,13 +43,14 @@ int main(int argc,char* argv[]){
     std::cout << "[Floor] Loaded " << requests.size()
               << " requests from " << file << "\n";
 
-    // send each request => wait ack
+    // send each request to scheduler => wait ack
     for(auto &r: requests){
         auto msg = serializeRequest(r);
         std::cout << "[Floor] Sending request " << msg
                   << " to " << schedIP << ":" << schedPort << "\n";
         udpSendString(sock, msg, schedIP, schedPort);
 
+        // Sending each serialzied FloorRequest via UDP to Scheduler
         std::string rip; 
         int rp;
         auto ack = udpRecvString(sock, rip, rp);
@@ -54,7 +60,9 @@ int main(int argc,char* argv[]){
                       << ackReq.floor << "->" << ackReq.destination << "\n\n";
         }
     }
+    
 
+    // Passive listening for late ACK's
     std::cout<<"[Floor] Done sending all. Listening...\n";
     while(true){
         std::string rip;
@@ -68,6 +76,7 @@ int main(int argc,char* argv[]){
         simulateSleepMs(500);
     }
 
+    // Cleanup
     close(sock);
     return 0;
 }

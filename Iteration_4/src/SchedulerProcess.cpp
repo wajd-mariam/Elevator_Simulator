@@ -18,6 +18,7 @@ struct ElevatorStatus {
 
 static std::atomic<bool> stopAll(false);
 
+// Shared queues and synchronization
 static std::queue<FloorRequest> floorRequests;
 static std::mutex mtxFloor;
 static std::condition_variable cvFloor;
@@ -100,6 +101,7 @@ static void elevatorThread(){
     }
 }
 
+// Method to select the best elevator for a given FloorRequest
 static int pickElevator(const FloorRequest &fr){
     int best=-1;
     int bestDist=999999;
@@ -121,10 +123,13 @@ int main(int argc,char* argv[]){
                  <<" <schedulerPort> <floorPort> <numElevators>\n";
         return 1;
     }
+    
+    // Parse and store arguments
     schedPort    = std::stoi(argv[1]);
     floorPort    = std::stoi(argv[2]);
     numElevators = std::stoi(argv[3]);
 
+    // Initialize all elevators states
     for(int i=0; i<numElevators; i++){
         ElevatorStatus es;
         es.id           = i;
@@ -133,15 +138,18 @@ int main(int argc,char* argv[]){
         elevInfo.push_back(es);
     }
 
+    // Create sockets
     floorSock    = createBoundSocket(schedPort);
     if(floorSock < 0) return 1;
     elevatorSock = createBoundSocket(schedPort + 100);
     if(elevatorSock < 0) return 1;
     sendSock     = socket(AF_INET, SOCK_DGRAM, 0);
 
+    // Start communication threads
     std::thread fth(floorThread);
     std::thread eth(elevatorThread);
 
+    // Main state-machine loop
     bool running = true;
     SchedulerState st = SchedulerState::WAIT_FOR_REQUEST;
     FloorRequest current;
