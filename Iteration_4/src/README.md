@@ -58,7 +58,7 @@ The project includes robust error handling for malformed requests and missing in
 
 ## Responsibilities
 - Ahmed Ali -> Testing, SchedulerProcess.cpp, general code modification and debugging
-- Wajd Mariam-> Diagrams, ElevatorProcess.cpp, general code modification and debugging.
+- Wajd Mariam-> Timing Diagrams, ElevatorProcess.cpp, general code modification and debugging.
 - Albert Robu-> Testing
 - Azan Huggins Goolamallee-> README.md and general code modification and debugging
 - Sam Nieuwenhuis -> FloorProcess.cpp Diagrams
