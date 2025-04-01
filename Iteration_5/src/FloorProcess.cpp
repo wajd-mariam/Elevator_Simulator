@@ -7,6 +7,7 @@ int main(int argc,char* argv[]){
         std::cerr<<"Usage: "<<argv[0]<<" <myPort> <schedulerIP> <schedulerPort> <inputFile>\n";
         return 1;
     }
+    std::cout << "STarting floor process." <<std::endl;
     // Reading command line arguments
     int myPort=std::stoi(argv[1]);
     std::string schedIP=argv[2];

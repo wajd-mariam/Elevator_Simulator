@@ -9,14 +9,17 @@
 
 // Launch backend processes
 void launchProcesses() {
+    std::cout << "Getting here." << std::endl;
     std::thread([] { system("./SchedulerProcess 4001 4000 3"); }).detach();
     std::thread([] { system("./ElevatorProcess 5000 0 127.0.0.1 4001"); }).detach();
     std::thread([] { system("./ElevatorProcess 5001 1 127.0.0.1 4001"); }).detach();
     std::thread([] { system("./ElevatorProcess 5002 2 127.0.0.1 4001"); }).detach();
 
-    sleep(2); // Ensure others are ready
+    std::cout << "Running processes" << std::endl;
+    sleep(3); // Ensure others are ready
 
     std::thread([] { system("./FloorProcess 4000 127.0.0.1 4001 input.txt"); }).detach();
+    std::cout << "Starting floor process" << std::endl;
 }
 
 // UI display
@@ -42,11 +45,12 @@ int main() {
 
     launchProcesses();  // Start all backend processes
 
+    /**
     initscr();            // Start ncurses mode
     noecho();             // Don't echo keypresses
     cbreak();             // Disable line buffering
     curs_set(0);          // Hide cursor
-
+     */
     while (true) {
         std::vector<ElevatorStatus> copy;
         {
@@ -54,7 +58,14 @@ int main() {
             copy = globalElevatorStatus;
         }
 
-        displayElevators(copy);
+        std::cout << "[UI DEBUG] Snapshot size: " << copy.size() << std::endl;
+        for (const auto& e : copy) {
+            std::cout << "[UI DEBUG] Elevator " << e.id << " Floor: " << e.currentFloor
+                    << " Door: " << (e.doorsOpen ? "Open" : "Closed")
+                    << " Fault: " << (e.isFaulted ? "YES" : "NO")
+                    << " State: " << e.state << std::endl;
+        }
+        //displayElevators(copy);
         sleep(1);
     }
 

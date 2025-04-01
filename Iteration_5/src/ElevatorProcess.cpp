@@ -1,3 +1,5 @@
+// Full ElevatorProcess.cpp code with live data integration for UI
+
 #include "Common.h"
 
 enum class ElevatorState {
@@ -9,6 +11,10 @@ enum class ElevatorState {
 };
 
 static const int ELEVATOR_CAPACITY = 4;
+static const int moveSpeedMs   = 500;
+static const int TIMEOUT_THRESHOLD = 15;
+
+
 
 static bool hardFault      = false;
 static bool doorStuckFault = false;
@@ -28,8 +34,48 @@ static int currentFloor = 1;
 static bool doorsOpen   = true;
 static ElevatorState eState = ElevatorState::WAITING;
 
-static const int moveSpeedMs   = 500;
-static const int TIMEOUT_THRESHOLD = 15;
+/** 
+static void updateUIState(const std::string& state) {
+    std::lock_guard<std::mutex> lock(globalElevatorMutex);
+    if (globalElevatorStatus.size() <= elevatorID)
+        globalElevatorStatus.resize(elevatorID + 1);
+
+    globalElevatorStatus[elevatorID].id = elevatorID;
+    globalElevatorStatus[elevatorID].currentFloor = currentFloor;
+    globalElevatorStatus[elevatorID].doorsOpen = doorsOpen;
+    globalElevatorStatus[elevatorID].isFaulted = hardFault;
+    globalElevatorStatus[elevatorID].state = state;
+}*/
+
+std::string getStateString() {
+    switch (eState) {
+        case ElevatorState::WAITING: return "WAITING";
+        case ElevatorState::RECEIVING: return "RECEIVING";
+        case ElevatorState::MOVING: return "MOVING";
+        case ElevatorState::SENDING_FEEDBACK: return "SENDING_FEEDBACK";
+        case ElevatorState::STOPPED: return "STOPPED";
+        default: return "UNKNOWN";
+    }
+}
+
+void sendStatusToUI() {
+    std::ostringstream oss;
+    oss << "ELEVATOR_STATUS|"
+        << "id=" << elevatorID
+        << "|floor=" << currentFloor
+        << "|doors=" << (doorsOpen ? "open" : "closed")
+        << "|fault=" << (hardFault ? "yes" : "no")
+        << "|state=" << getStateString();
+
+    std::string msg = oss.str();
+    udpSendString(statusSock, msg, "127.0.0.1", 6000);  // UI listens on port 6000
+}
+
+// ---------------- Fault Simulation ----------------
+void sendFault(const std::string &desc) {
+    std::string fmsg = "FAULT|ElevID=" + std::to_string(elevatorID) + "|" + desc;
+    udpSendString(sendSock, fmsg, schedIP, schedPort + 100);
+}
 
 // "FAULT|ElevID=x|desc"
 static void sendFault(const std::string &desc){
@@ -98,6 +144,7 @@ static void moveFloors(int from, int to){
     }
 }
 
+// ---------------- Elevator Logic ----------------
 static void doMovement(const FloorRequest &r){
     // Check for immediate stuckElevator => Hard fault
     if(r.hasFault && r.faultType == "stuckElevator"){
@@ -142,6 +189,7 @@ static void doMovement(const FloorRequest &r){
     simulateSleepMs(300);
     checkDoorStuck();
     if(hardFault) return;
+    sendStatusToUI();
 
     // close door
     // std::cout<<"[Elevator "<<elevatorID<<"] Doors closing.\n";
@@ -149,6 +197,7 @@ static void doMovement(const FloorRequest &r){
     simulateSleepMs(300);
     checkDoorStuck();
     if(hardFault) return;
+    sendStatusToUI();
 
     // move to destination
     if(currentFloor != r.destination){
@@ -162,6 +211,7 @@ static void doMovement(const FloorRequest &r){
     doorsOpen = true;
     simulateSleepMs(300);
     checkDoorStuck();
+    sendStatusToUI();
 }
 
 static void listenerThread(){
@@ -197,20 +247,8 @@ static void elevatorMainLoop(){
             currentReq = reqQueue.front();
             reqQueue.pop();
             lk.unlock();
-
-            // Updating global shared data:
-            globalElevatorStatus[elevatorID].state = "WAITING";
-            globalElevatorStatus[elevatorID].currentFloor = currentFloor;
-            globalElevatorStatus[elevatorID].doorsOpen = doorsOpen;
-            globalElevatorStatus[elevatorID].isFaulted = hardFault;
-
-            //std::cout<<"[Elevator "<<elevatorID<<"] Received request floor="
-                     //<< currentReq.floor <<"->"<< currentReq.destination
-                     //<<" fault="<<(currentReq.hasFault?1:0)<<"("
-                     //<< currentReq.faultType <<") pass="
-                     //<< currentReq.passengers <<"\n";
-
             eState = ElevatorState::RECEIVING;
+            sendStatusToUI();
             break;
         }
         case ElevatorState::RECEIVING:{
@@ -218,20 +256,9 @@ static void elevatorMainLoop(){
             break;
         }
         case ElevatorState::MOVING:{
-            // Update initial status before movement starts
-            globalElevatorStatus[elevatorID].state = "MOVING";
-            globalElevatorStatus[elevatorID].currentFloor = currentFloor;
-            globalElevatorStatus[elevatorID].doorsOpen = doorsOpen;
-            globalElevatorStatus[elevatorID].isFaulted = hardFault;
-            
+            sendStatusToUI();
             // Do actual movement
             doMovement(currentReq);
-            // After movement finishes, update status again
-            globalElevatorStatus[elevatorID].currentFloor = currentFloor;
-            globalElevatorStatus[elevatorID].doorsOpen = doorsOpen;
-            globalElevatorStatus[elevatorID].isFaulted = hardFault;
-            globalElevatorStatus[elevatorID].state = hardFault ? "FAULT" : "IDLE";
-
             // Determine next state
             if(!hardFault){
                 eState = ElevatorState::SENDING_FEEDBACK;
@@ -255,23 +282,13 @@ static void elevatorMainLoop(){
             auto msg = serializeRequest(done);
             udpSendString(sendSock, msg, schedIP, schedPort + 100);
 
-            // Update UI status
-            globalElevatorStatus[elevatorID].currentFloor = currentFloor;
-            globalElevatorStatus[elevatorID].doorsOpen = doorsOpen;
-            globalElevatorStatus[elevatorID].isFaulted = hardFault;
-            globalElevatorStatus[elevatorID].state = "WAITING";
-
             eState = ElevatorState::WAITING;
+            // Update UI status
+            sendStatusToUI();
             break;
         }
         case ElevatorState::STOPPED:{
-            //std::cout<<"[Elevator "<<elevatorID<<"] STOPPED.\n";
-            // Update UI status
-            globalElevatorStatus[elevatorID].state = "FAULT";
-            globalElevatorStatus[elevatorID].isFaulted = true;
-            globalElevatorStatus[elevatorID].doorsOpen = doorsOpen;
-            globalElevatorStatus[elevatorID].currentFloor = currentFloor;
-
+            sendStatusToUI();
             running = false;
             break;
         }
@@ -290,15 +307,14 @@ int main(int argc,char* argv[]){
     schedIP     = argv[3];
     schedPort   = std::stoi(argv[4]);
 
+    std::cout << "STarting elevator %d process." << elevatorID << std::endl;
     /// Initialize global elevator status
-    if (globalElevatorStatus.size() <= elevatorID)
-    globalElevatorStatus.resize(elevatorID + 1);
-
-    globalElevatorStatus[elevatorID].id = elevatorID;
-    globalElevatorStatus[elevatorID].currentFloor = currentFloor;
-    globalElevatorStatus[elevatorID].doorsOpen = doorsOpen;
-    globalElevatorStatus[elevatorID].isFaulted = hardFault;
-    globalElevatorStatus[elevatorID].state = "WAITING"; 
+    /**{
+        std::lock_guard<std::mutex> lock(globalElevatorMutex);
+        if (globalElevatorStatus.size() <= elevatorID)
+            globalElevatorStatus.resize(elevatorID + 1);
+        globalElevatorStatus[elevatorID] = {elevatorID, currentFloor, doorsOpen, hardFault, "WAITING"};
+    }*/
 
     listenSock = createBoundSocket(myPort);
     if(listenSock < 0) return 1;

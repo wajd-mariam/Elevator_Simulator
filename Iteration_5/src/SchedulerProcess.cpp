@@ -118,6 +118,8 @@ int main(int argc,char* argv[]){
         return 1;
     }
     
+    std::cout << "STarting scheduler process." <<std::endl;
+    
     // Parse and store arguments
     schedPort    = std::stoi(argv[1]);
     floorPort    = std::stoi(argv[2]);
