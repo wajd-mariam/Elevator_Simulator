@@ -20,6 +20,7 @@ enum class ElevatorState {
     RECEIVING,
     MOVING,
     SENDING_FEEDBACK,
+    DOORS_OPEN,
     STOPPED
 };
 
@@ -29,6 +30,7 @@ struct ElevatorStatus {
     bool doorsOpen;
     bool isFaulted;
     std::string state; // "WAITING", "MOVING", etc.
+    std::string direction;
 };
 
 // Socket helpers

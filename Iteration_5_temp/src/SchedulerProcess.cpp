@@ -22,6 +22,8 @@ struct ElevatorData {
 static std::vector<ElevatorData> elevInfo;
 
 int pickElevator(const FloorRequest &r){
+    static int lastChosen = -1;
+    
     int best=-1; 
     int bestDist=999999;
     for(size_t i=0; i<elevInfo.size(); ++i){
@@ -30,8 +32,16 @@ int pickElevator(const FloorRequest &r){
         if(dist < bestDist){
             bestDist = dist;
             best = (int)i;
+        } else if (dist == bestDist) {
+            // Tie-breaker: pick next after lastChosen
+            if ((int)i > lastChosen) {
+                best = i;
+            }
         }
     }
+    if (best != -1)
+        lastChosen = best;
+
     return best;
 }
 

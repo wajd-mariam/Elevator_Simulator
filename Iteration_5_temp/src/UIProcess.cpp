@@ -15,19 +15,23 @@ std::mutex mtx;
 ElevatorStatus deserializeStatus(const std::string& msg) {
     ElevatorStatus es;
 
-    size_t idPos = msg.find("ElevID=");
-    size_t floorPos = msg.find("Floor=");
-    size_t faultPos = msg.find("Fault=");
+    std::istringstream iss(msg);
+    std::string token;
 
-    if (idPos != std::string::npos)
-        es.id = std::stoi(msg.substr(idPos + 7, msg.find('|', idPos) - (idPos + 7)));
-
-    if (floorPos != std::string::npos)
-        es.currentFloor = std::stoi(msg.substr(floorPos + 6, msg.find('|', floorPos) - (floorPos + 6)));
-
-    if (faultPos != std::string::npos)
-        es.isFaulted = std::stoi(msg.substr(faultPos + 6)) != 0;
-
+    while (std::getline(iss, token, '|')) {
+        if (token.find("ElevID=") == 0)
+            es.id = std::stoi(token.substr(7));
+        else if (token.find("Floor=") == 0)
+            es.currentFloor = std::stoi(token.substr(6));
+        else if (token.find("Fault=") == 0)
+            es.isFaulted = std::stoi(token.substr(6)) != 0;
+        else if (token.find("Door=") == 0)
+            es.doorsOpen = std::stoi(token.substr(5)) != 0;
+        else if (token.find("Direction=") == 0)
+            es.direction = token.substr(10);  // UP, DOWN, IDLE
+        else if (token.find("State=") == 0)
+            es.state = token.substr(6);       // MOVING, WAITING, etc.
+    }
     return es;
 }
 
@@ -54,14 +58,18 @@ void displayUI() {
         clear();
         int row = 1;
 
-        mvprintw(row++, 2, "+=============== Elevator Status ===============+");
-        for (size_t i = 0; i < liveStatus.size(); ++i) {
-            const ElevatorStatus& e = liveStatus[i];
-            mvprintw(row++, 2, "| Elevator %-2d | Floor: %-3d | Status: %-12s |",
+        mvprintw(row++, 2, "+================ Elevator Status ================+");
+        mvprintw(row++, 2, "| Elevator | Floor | Direction |     Status       |");
+        mvprintw(row++, 2, "+----------+-------+-----------+------------------+");
+
+        for (const auto& e : liveStatus) {
+            mvprintw(row++, 2, "|    %-5d |  %-4d |  %-8s |  %-16s |",
                      e.id, e.currentFloor, 
-                     e.isFaulted ? "FAULT" : "OK");
+                     e.direction.c_str(),
+                     e.isFaulted ? "FAULT" : e.state.c_str());
         }
-        mvprintw(row++, 2, "+===============================================+");
+
+        mvprintw(row++, 2, "+=================================================+");
 
         // Dummy request queue section for future expansion (optional)
         row++;

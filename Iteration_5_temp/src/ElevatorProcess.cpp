@@ -20,21 +20,35 @@ static ElevatorState eState = ElevatorState::WAITING;
 
 static std::atomic<bool> stopAll(false);
 
+static std::string direction = "IDLE";
+
 /**
  * @brief Send an up-to-date "STATUS" message to the Scheduler. 
  * Format: STATUS|ElevID=x|Floor=y|Fault=z
  */
-static void sendElevatorStatus(int sock, int elevatorID, const std::string &schedIP, int schedPort) {
+static void sendElevatorStatus(int sock, int elevatorID, const std::string &schedIP, int schedPort, const std::string& direction, const std::string& state) {
     std::ostringstream oss;
     oss << "STATUS|ElevID=" << elevatorID
         << "|Floor=" << currentFloor
-        << "|Fault=" << (hardFault ? 1 : 0);
+        << "|Fault=" << (hardFault ? 1 : 0)
+        << "|Direction=" << direction
+        << "|State=" << (hardFault ? "FAULT" : (eState == ElevatorState::MOVING ? "MOVING" : "WAITING"));
 
     // For minimal changes, we reuse schedPort+100 for 'status' 
     // or you can use the same port the elevator uses for completions
     udpSendString(sock, oss.str(), schedIP, schedPort + 100);
 
     udpSendString(sock, oss.str(), "127.0.0.1", 6000);
+}
+
+std::string elevatorStateToString(ElevatorState state) {
+    switch (state) {
+        case ElevatorState::WAITING: return "WAITING";
+        case ElevatorState::MOVING: return "MOVING";
+        case ElevatorState::DOORS_OPEN: return "DOORS OPEN";
+        case ElevatorState::STOPPED: return "STOPPED";
+        default: return "UNKNOWN";
+    }
 }
 
 int main(int argc, char* argv[]){
@@ -70,18 +84,30 @@ int main(int argc, char* argv[]){
             }
             // It's presumably a normal floor request:
             FloorRequest fr = deserializeRequest(data);
-            //std::cout<<"[Elevator "<<elevatorID<<"] Received request floor="
-            //         <<fr.floor<<"->"<<fr.destination<<"\n";
+            
+            // Setting direction after deserialzing FloorReuqest fr
+            std::string direction;
+            if (fr.destination > currentFloor)
+                direction = "UP";
+            else if (fr.destination < currentFloor)
+                direction = "DOWN";
+            else
+                direction = "IDLE";
 
             // Mark elevator as moving
             eState = ElevatorState::MOVING;
             // Send updated status so scheduler sees new state + floor
-            sendElevatorStatus(sendSock, elevatorID, schedIP, schedPort);
+            sendElevatorStatus(sendSock, elevatorID, schedIP, schedPort, direction, elevatorStateToString(eState));
 
             // Simulate movement from currentFloor -> pickup
             int dist = std::abs(fr.floor - currentFloor);
             simulateSleepMs(dist * 500);
             currentFloor= fr.floor;
+
+            // Determining direction: UP or DOWN or IDLE
+            if (fr.floor > currentFloor) direction = "UP";
+            else if (fr.floor < currentFloor) direction = "DOWN";
+            else direction = "IDLE";
 
             // Doors open
             doorsOpen=true; simulateSleepMs(300);
@@ -106,7 +132,7 @@ int main(int argc, char* argv[]){
             // Mark elevator as WAITING
             eState= ElevatorState::WAITING;
             // Send updated status
-            sendElevatorStatus(sendSock, elevatorID, schedIP, schedPort);
+            sendElevatorStatus(sendSock, elevatorID, schedIP, schedPort, direction, elevatorStateToString(eState) );
         }
     });
     listener.detach();
