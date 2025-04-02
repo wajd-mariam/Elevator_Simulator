@@ -45,11 +45,11 @@ int main(int argc,char* argv[]){
     for(auto &r: requests){
         std::string msg = serializeRequest(r);
         udpSendString(sock, msg, schedIP, schedPort);
+        udpSendString(sock, msg, "127.0.0.1", 6001);  // Send copy to UI
         //std::cout<<"[Floor] Sent request floor="<<r.floor
         //        <<" -> "<<r.destination<<"\n";
         simulateSleepMs(500);
     }
-    //std::cout<<"[Floor] Done sending requests.\n";
 
     // We could listen for acks here, but for now just idle
     while(true){

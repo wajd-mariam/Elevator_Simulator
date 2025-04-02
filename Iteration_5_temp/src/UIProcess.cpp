@@ -1,4 +1,5 @@
 #include <ncurses.h>
+#include <iostream>
 #include <vector>
 #include <string>
 #include <thread>
@@ -10,6 +11,9 @@
 
 std::vector<ElevatorStatus> liveStatus(3);  // for 3 elevators
 std::mutex mtx;
+
+std::vector<FloorRequest> liveRequests;
+std::mutex mtxRequests;
 
 // Deserialize STATUS string into ElevatorStatus
 ElevatorStatus deserializeStatus(const std::string& msg) {
@@ -52,6 +56,28 @@ void uiListenerThread() {
     }
 }
 
+void requestListenerThread() {
+    int sock = createBoundSocket(6001);  // requests arrive at port 6001
+    if (sock < 0) return;
+
+    while (true) {
+        std::string ip;
+        int port;
+        auto msg = udpRecvString(sock, ip, port);
+
+        if (!msg.empty()) {
+            try {
+                FloorRequest fr = deserializeRequest(msg);
+                std::lock_guard<std::mutex> lock(mtxRequests);
+                liveRequests.push_back(fr);
+            } catch (...) {
+                // malformed input, skip
+            }
+        }
+    }
+}
+
+
 // Draw the current UI using ncurses
 void displayUI() {
     while (true) {
@@ -71,20 +97,29 @@ void displayUI() {
 
         mvprintw(row++, 2, "+=================================================+");
 
-        // Dummy request queue section for future expansion (optional)
+        // Display Floor Request Queue
         row++;
         mvprintw(row++, 2, "+================== Request Queue ======================+");
-        mvprintw(row++, 2, "| (example) Req 1: Floor 2 => 8 | Passengers: 3          |");
-        mvprintw(row++, 2, "| (example) Req 2: Floor 6 => 1 | Fault: Door Stuck      |");
-        mvprintw(row++, 2, "| (example) Req 3: Floor 4 => 9 | Passengers: 5 (Over)   |");
-        mvprintw(row++, 2, "+=======================================================+");
 
+        {
+            std::lock_guard<std::mutex> lock(mtxRequests);  // Protect access to liveRequests
+            if (liveRequests.empty()) {
+                mvprintw(row++, 2, "| (No pending requests)                                 |");
+            } else {
+                int count = 1;
+                for (const auto& r : liveRequests) {
+                    mvprintw(row++, 2, "| Req %-2d: Floor %-2d -> %-2d | Passengers: %-2d        |", 
+                             count++, r.floor, r.destination, r.passengers);
+                }
+            }   
+        }
+
+        mvprintw(row++, 2, "+=======================================================+");
         mvprintw(row + 2, 2, "Press 'q' to quit.");
 
         refresh();
 
-        // Allow graceful quit with 'q'
-        timeout(100);  // wait 100ms
+        timeout(100);  // non-blocking key wait
         int ch = getch();
         if (ch == 'q' || ch == 'Q') break;
 
@@ -108,10 +143,13 @@ int main() {
 
     initscr(); noecho(); cbreak(); curs_set(0);
 
-    std::thread listener(uiListenerThread);
+    std::thread elevatorListener(uiListenerThread);       // Receives STATUS updates from elevators
+    std::thread requestListener(requestListenerThread);   // Receives REQUEST updates from FloorProcess
     displayUI();  // this blocks forever
 
-    listener.join();
-    endwin();
+    elevatorListener.join();
+    requestListener.join();
+
+    endwin();// Restore terminal state
     return 0;
 }

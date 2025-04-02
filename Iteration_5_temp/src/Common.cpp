@@ -54,13 +54,13 @@ std::string udpRecvString(int sock, std::string &senderIP, int &senderPort){
 
 // FloorRequest <-> string
 std::string serializeRequest(const FloorRequest &fr){
-    // Format: time floor direction destination hasFault faultType passengers
     std::ostringstream oss;
-    oss << fr.timeStamp <<" "<< fr.floor <<" "<< fr.direction <<" "
-        << fr.destination <<" "<< fr.hasFault <<" "<< fr.faultType <<" "
+    oss << fr.timeStamp << " " << fr.floor << " " << fr.direction << " "
+        << fr.destination << " " << fr.hasFault << " " << fr.faultType << " "
         << fr.passengers;
     return oss.str();
 }
+
 FloorRequest deserializeRequest(const std::string &s){
     FloorRequest fr;
     std::istringstream iss(s);

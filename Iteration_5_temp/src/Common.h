@@ -30,6 +30,7 @@ struct ElevatorStatus {
     bool doorsOpen;
     bool isFaulted;
     std::string state; // "WAITING", "MOVING", etc.
+    std::string faultType;
     std::string direction;
 };
 
