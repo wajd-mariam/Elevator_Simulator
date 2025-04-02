@@ -35,6 +35,8 @@ ElevatorStatus deserializeStatus(const std::string& msg) {
             es.direction = token.substr(10);  // UP, DOWN, IDLE
         else if (token.find("State=") == 0)
             es.state = token.substr(6);       // MOVING, WAITING, etc.
+        else if (token.find("ReqID=") == 0)
+            es.currentRequestID = std::stoi(token.substr(7));
     }
     return es;
 }
@@ -84,12 +86,12 @@ void displayUI() {
         clear();
         int row = 1;
 
-        mvprintw(row++, 2, "+================ Elevator Status ================+");
-        mvprintw(row++, 2, "| Elevator | Floor | Direction |     Status       |");
+        mvprintw(row++, 2, "+================= Elevator Status ==================+");
+        mvprintw(row++, 2, "| Elevator | Floor  |  Dir  |   Status   |  Req ID   |");
         mvprintw(row++, 2, "+----------+-------+-----------+------------------+");
 
         for (const auto& e : liveStatus) {
-            mvprintw(row++, 2, "|    %-5d |  %-4d |  %-8s |  %-16s |",
+            mvprintw(row++, 2, "|   %-6d | %-6d | %-5s | %-10s | %-7d |",
                      e.id, e.currentFloor, 
                      e.direction.c_str(),
                      e.isFaulted ? "FAULT" : e.state.c_str());

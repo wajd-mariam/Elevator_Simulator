@@ -9,9 +9,10 @@ struct FloorRequest {
     int floor;
     std::string direction;  // "UP"/"DOWN"
     int destination;
-    bool hasFault;          // if a fault is injected
+    bool hasFault = false;          // if a fault is injected
     std::string faultType;  // "doorStuck", "stuckElevator", etc.
     int passengers;         // passenger count
+    int requestID = 1;
 };
 
 // Basic elevator states
@@ -32,6 +33,7 @@ struct ElevatorStatus {
     std::string state; // "WAITING", "MOVING", etc.
     std::string faultType;
     std::string direction;
+    int currentRequestID = -1;
 };
 
 // Socket helpers

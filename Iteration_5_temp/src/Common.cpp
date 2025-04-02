@@ -55,7 +55,7 @@ std::string udpRecvString(int sock, std::string &senderIP, int &senderPort){
 // FloorRequest <-> string
 std::string serializeRequest(const FloorRequest &fr){
     std::ostringstream oss;
-    oss << fr.timeStamp << " " << fr.floor << " " << fr.direction << " "
+    oss << fr.requestID << " " << fr.timeStamp << " " << fr.floor << " " << fr.direction << " "
         << fr.destination << " " << fr.hasFault << " " << fr.faultType << " "
         << fr.passengers;
     return oss.str();
@@ -64,7 +64,7 @@ std::string serializeRequest(const FloorRequest &fr){
 FloorRequest deserializeRequest(const std::string &s){
     FloorRequest fr;
     std::istringstream iss(s);
-    iss >> fr.timeStamp >> fr.floor >> fr.direction
+    iss >> fr.requestID >> fr.timeStamp >> fr.floor >> fr.direction
         >> fr.destination >> std::boolalpha
         >> fr.hasFault >> fr.faultType >> fr.passengers;
     return fr;
@@ -77,7 +77,9 @@ std::string serializeElevatorStatus(const ElevatorStatus &st){
     oss << st.id <<" "<< st.currentFloor <<" "
         << (st.doorsOpen?"1":"0") <<" "
         << (st.isFaulted?"1":"0") <<" "
-        << st.state;
+        << st.state
+        << st.direction << " "
+        << st.currentRequestID;
     return oss.str();
 }
 
@@ -85,7 +87,7 @@ ElevatorStatus deserializeElevatorStatus(const std::string &s){
     ElevatorStatus es;
     std::istringstream iss(s);
     int doorFlag, faultFlag;
-    iss >> es.id >> es.currentFloor >> doorFlag >> faultFlag >> es.state;
+    iss >> es.id >> es.currentFloor >> doorFlag >> faultFlag >> es.state >> es.direction >> es.currentRequestID;
     es.doorsOpen = (doorFlag==1);
     es.isFaulted = (faultFlag==1);
     return es;

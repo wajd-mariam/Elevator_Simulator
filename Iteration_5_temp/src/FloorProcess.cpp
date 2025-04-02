@@ -41,8 +41,11 @@ int main(int argc,char* argv[]){
     }
     in.close();
 
+    int requestCounter = 1;
+    int requestID = -1;
     // Send each request to Scheduler
     for(auto &r: requests){
+        r.requestID = requestCounter++; // Assinging unique reqeuest ID
         std::string msg = serializeRequest(r);
         udpSendString(sock, msg, schedIP, schedPort);
         udpSendString(sock, msg, "127.0.0.1", 6001);  // Send copy to UI

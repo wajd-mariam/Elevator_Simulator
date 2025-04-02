@@ -22,17 +22,20 @@ static std::atomic<bool> stopAll(false);
 
 static std::string direction = "IDLE";
 
+static int currentRequestID = -1;
+
 /**
  * @brief Send an up-to-date "STATUS" message to the Scheduler. 
  * Format: STATUS|ElevID=x|Floor=y|Fault=z
  */
-static void sendElevatorStatus(int sock, int elevatorID, const std::string &schedIP, int schedPort, const std::string& direction, const std::string& state) {
+static void sendElevatorStatus(int sock, int elevatorID, const std::string &schedIP, int schedPort, const std::string& direction, const std::string& state, int requestID) {
     std::ostringstream oss;
     oss << "STATUS|ElevID=" << elevatorID
         << "|Floor=" << currentFloor
         << "|Fault=" << (hardFault ? 1 : 0)
         << "|Direction=" << direction
-        << "|State=" << (hardFault ? "FAULT" : (eState == ElevatorState::MOVING ? "MOVING" : "WAITING"));
+        << "|State=" << (hardFault ? "FAULT" : (eState == ElevatorState::MOVING ? "MOVING" : "WAITING"))
+        << "|RequestID=" << currentRequestID;
 
     // For minimal changes, we reuse schedPort+100 for 'status' 
     // or you can use the same port the elevator uses for completions
@@ -84,6 +87,8 @@ int main(int argc, char* argv[]){
             }
             // It's presumably a normal floor request:
             FloorRequest fr = deserializeRequest(data);
+
+            currentRequestID = fr.requestID;
             
             // Setting direction after deserialzing FloorReuqest fr
             std::string direction;
@@ -97,7 +102,7 @@ int main(int argc, char* argv[]){
             // Mark elevator as moving
             eState = ElevatorState::MOVING;
             // Send updated status so scheduler sees new state + floor
-            sendElevatorStatus(sendSock, elevatorID, schedIP, schedPort, direction, elevatorStateToString(eState));
+            sendElevatorStatus(sendSock, elevatorID, schedIP, schedPort, direction, elevatorStateToString(eState), fr.requestID);
 
             // Simulate movement from currentFloor -> pickup
             int dist = std::abs(fr.floor - currentFloor);
@@ -132,7 +137,7 @@ int main(int argc, char* argv[]){
             // Mark elevator as WAITING
             eState= ElevatorState::WAITING;
             // Send updated status
-            sendElevatorStatus(sendSock, elevatorID, schedIP, schedPort, direction, elevatorStateToString(eState) );
+            sendElevatorStatus(sendSock, elevatorID, schedIP, schedPort, direction, elevatorStateToString(eState), fr.requestID);
         }
     });
     listener.detach();
