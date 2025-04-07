@@ -18,32 +18,6 @@ std::mutex mtxRequests;
 
 int statusCount = 0;
 
-// Deserialize STATUS string into ElevatorStatus
-ElevatorStatus deserializeStatus(const std::string& msg) {
-    ElevatorStatus es;
-
-    std::istringstream iss(msg);
-    std::string token;
-
-    while (std::getline(iss, token, '|')) {
-        if (token.find("ElevID=") == 0)
-            es.id = std::stoi(token.substr(7));
-        else if (token.find("Floor=") == 0)
-            es.currentFloor = std::stoi(token.substr(6));
-        else if (token.find("Fault=") == 0)
-            es.isFaulted = std::stoi(token.substr(6)) != 0;
-        else if (token.find("Door=") == 0)
-            es.doorsOpen = std::stoi(token.substr(5)) != 0;
-        else if (token.find("Direction=") == 0)
-            es.direction = token.substr(10);  // UP, DOWN, IDLE
-        else if (token.find("State=") == 0)
-            es.state = token.substr(6);       // MOVING, WAITING, etc.
-        else if (token.find("ReqID=") == 0)
-            es.currentRequestID = std::stoi(token.substr(7));
-    }
-    return es;
-}
-
 // Background thread to receive UDP status messages from elevators
 void uiListenerThread() {
     int sock = createBoundSocket(6000);  // UI listens on port 6000
@@ -106,13 +80,13 @@ void displayUI() {
         int row = 1;
 
         mvprintw(row++, 2, "+================= Elevator Status ==========================+");
-        mvprintw(row++, 2, "| Elevator | Floor | Dir   |   Status   |    Fault Type      |");
+        mvprintw(row++, 2, "| Elevator | Floor | Dir   |   Status  |    Fault Type       |");
         mvprintw(row++, 2, "+----------+-------+-------+-----------+---------------------+");
 
         {
             std::lock_guard<std::mutex> lock(mtx);  // lock liveStatus
             for (const auto& e : liveStatus) {
-                mvprintw(row++, 2, "|   %-6d | %-5d | %-6s | %-10s | %-19s |",
+                mvprintw(row++, 2, "|   %-6d | %-5d | %-5s | %-9s | %-19s |",
                          e.id,
                          e.currentFloor,
                          e.direction.c_str(),
@@ -125,7 +99,7 @@ void displayUI() {
 
         // Display Floor Request Queue
         row++;
-        mvprintw(row++, 2, "+==================== Request Queue ==========================+");
+        mvprintw(row++, 2, "+==================== Request Queue ========================+");
 
         {
             std::lock_guard<std::mutex> lock(mtxRequests);  // lock liveRequests
