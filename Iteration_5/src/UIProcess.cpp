@@ -17,6 +17,7 @@ std::vector<FloorRequest> liveRequests;
 std::mutex mtxRequests;
 
 int statusCount = 0;
+const int ELEVATOR_CAPACITY = 4;
 
 // Background thread to receive UDP status messages from elevators
 void uiListenerThread() {
@@ -25,9 +26,7 @@ void uiListenerThread() {
     while (true) {
         std::string ip; int port;
         auto msg = udpRecvString(sock, ip, port);
-        if (!msg.empty()) {
-            //std::cout << "[UI DEBUG] Received: " << msg << std::endl;
-        }
+
         if (!msg.empty() && msg.find("STATUS") == 0) {
             ElevatorStatus status = deserializeElevatorStatus(msg);
             std::lock_guard<std::mutex> lock(mtx);
@@ -51,18 +50,19 @@ void requestListenerThread() {
         if (!msg.empty()) {
             FloorRequest fr = deserializeRequest(msg);
 
-            // Debug output: print the deserialized request
-            /**std::lock_guard<std::mutex> lock(mtxDebug);
-            std::cout << "[UI DEBUG] Received Request: "
-                      << "ReqID=" << fr.requestID
-                      << ", Floor=" << fr.floor
-                      << ", Dest=" << fr.destination
-                      << ", Dir=" << fr.direction
-                      << ", Passengers=" << fr.passengers
-                      << ", Fault=" << fr.hasFault
-                      << ", Type=" << fr.faultType
-                      << std::endl;
-            */    
+            /**
+            std::lock_guard<std::mutex> lock(mtxDebug);
+            std::cout << "[UI DEBUG] Parsed Floor Request => "
+                    << "ReqID=" << fr.requestID
+                    << ", Floor=" << fr.floor
+                    << ", Dest=" << fr.destination
+                    << ", Dir=" << fr.direction
+                    << ", Passengers=" << fr.passengers
+                    << ", Fault=" << (fr.hasFault ? "true" : "false")
+                    << ", Type=" << fr.faultType
+                    << ", AssignedElev=" << fr.assignedElevator
+                    << std::endl;*/
+               
             {
                 std::lock_guard<std::mutex> lock(mtxRequests);
                 liveRequests.push_back(fr);
@@ -115,11 +115,11 @@ void displayUI() {
             }
         }
 
-        mvprintw(row++, 2, "+==============================================================+");
+        mvprintw(row++, 2, "+============================================================+");
 
         // Display Floor Request Queue
         row++;
-        mvprintw(row++, 2, "+==================== Request Queue ========================+");
+        mvprintw(row++, 2, "+============================ Request Queue ===============================+");
 
         {
             std::lock_guard<std::mutex> lock(mtxRequests);  // lock liveRequests
@@ -127,13 +127,15 @@ void displayUI() {
                 mvprintw(row++, 2, "| (No pending requests)                                      |");
             } else {
                 for (const auto& r : liveRequests) {
-                    mvprintw(row++, 2, "| Req ID %-3d: Floor %-2d -> %-2d | Passengers: %-2d             |", 
-                             r.requestID, r.floor, r.destination, r.passengers);
+                    if (r.assignedElevator == -1) continue;  // Skip printing in the UI unassigned requests
+                    mvprintw(row++, 2, "| Req ID %-3d: Floor %-2d -> %-2d | Passengers: %-2d | Assigned: %-2d | %-11s |", 
+                             r.requestID, r.floor, r.destination, r.passengers, r.assignedElevator,
+                             (r.passengers > ELEVATOR_CAPACITY ? "RETRYING" : "        "));;
                 }
             }
         }
 
-        mvprintw(row++, 2, "+============================================================+");
+        mvprintw(row++, 2, "+==========================================================================+");
 
         // Footer
         mvprintw(row + 1, 2, "Press 'q' to quit.");
