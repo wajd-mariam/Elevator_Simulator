@@ -72,6 +72,14 @@ void requestListenerThread() {
     }
 }
 
+// Helper function to classify fault type:
+std::string classifyFault(const std::string& faultType) {
+    if (faultType == "elevatorStuck" || faultType == "motorFailure")
+        return "Hard";
+    if (faultType == "doorStuck" || faultType == "lightMalfunction")
+        return "Soft";
+    return "None";
+}
 
 // Draw the current UI using ncurses
 void displayUI() {
@@ -86,12 +94,24 @@ void displayUI() {
         {
             std::lock_guard<std::mutex> lock(mtx);  // lock liveStatus
             for (const auto& e : liveStatus) {
+                // Classifying and assigning fault types appropriately:
+                std::string faultDisplay = "None";
+                //if (e.isFaulted) {
+                    // Classify the fault
+                if (e.faultType == "elevatorStuck" || e.faultType == "motorFailure")
+                    faultDisplay = "Hard: " + e.faultType;
+                else if (e.faultType == "doorStuck" || e.faultType == "lightMalfunction")
+                    faultDisplay = "Soft: " + e.faultType;
+                else
+                    faultDisplay = "Unknown: " + e.faultType;
+                //}
+
                 mvprintw(row++, 2, "|   %-6d | %-5d | %-5s | %-9s | %-19s |",
                          e.id,
                          e.currentFloor,
                          e.direction.c_str(),
                          e.isFaulted ? "FAULT" : e.state.c_str(),
-                         e.faultType.c_str());
+                         faultDisplay.c_str());
             }
         }
 
@@ -148,8 +168,8 @@ int main() {
     std::thread elevatorListener(uiListenerThread);       // Receives STATUS updates from elevators
     std::thread requestListener(requestListenerThread);   // Receives REQUEST updates from FloorProcess
     displayUI(); 
-    requestListener.join();
-
+    
     endwin();// Restore terminal state
+    requestListener.join();
     return 0;
 }
