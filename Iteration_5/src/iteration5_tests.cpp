@@ -14,6 +14,8 @@ static const int TIMEOUT_THRESHOLD = 15;
 static const int moveSpeedMs       = 500;
 static const int timerMarginMs     = 2000;
 
+// Simulates how an elevator would handle a given floor request,
+// including movement, capacity checks, and fault detection.
 void simulateElevatorRequest(ElevatorSim &e, const FloorRequest &req)
 {
     if(e.hardFault) {
@@ -142,6 +144,17 @@ TEST(Iteration5_Simulation, OverCapacity)
     EXPECT_EQ(e.currentFloor, 1);
 }
 
+
+// Test: Request with zero passengers
+TEST(Iteration5_Simulation, ZeroPassengers) {
+    ElevatorSim e;
+    FloorRequest req("xx", 2, "Down", 1, false, "noFault", 0);
+    simulateElevatorRequest(e, req);
+    EXPECT_EQ(e.currentFloor, 1);
+    EXPECT_FALSE(e.hardFault);
+}
+
+
 // UI Test: Verifies that a valid STATUS message is correctly parsed into an ElevatorStatus object
 TEST(Iteration5_Display, DeserializeElevatorStatusSimple) {
     std::string msg = "STATUS|ElevID=0|Floor=5|Fault=0|Direction=UP|State=MOVING|FaultType=noFault";
@@ -196,6 +209,7 @@ TEST(Iteration5_Display, DeserializeElevatorStatus_DoorStuckMovingDown)
     EXPECT_EQ(es.state, "MOVING");
     EXPECT_EQ(es.faultType, "doorStuck");
 }
+
 
 int main(int argc, char** argv){
     ::testing::InitGoogleTest(&argc, argv);
