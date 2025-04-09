@@ -75,8 +75,8 @@ std::string serializeElevatorStatus(const ElevatorStatus &st){
     oss << st.id <<" "<< st.currentFloor <<" "
         << (st.doorsOpen?"1":"0") <<" "
         << (st.isFaulted?"1":"0") <<" "
-        << st.state << " " 
         << st.direction << " "
+        << st.state << " " 
         << st.faultType;
     return oss.str();
 }
@@ -107,7 +107,7 @@ ElevatorStatus deserializeElevatorStatus(const std::string &s){
         else if (token.find("State=") == 0)
             es.state = token.substr(6);
         else if (token.find("FaultType=") == 0)
-            es.faultType = token.substr(10);  // 👈 parses "doorStuck", "noFault", etc.
+            es.faultType = token.substr(10);  //  parses "doorStuck", "noFault", etc.
     }
 
     return es;

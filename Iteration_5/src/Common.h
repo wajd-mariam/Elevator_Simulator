@@ -16,11 +16,11 @@ struct FloorRequest {
 
     FloorRequest() = default;
     
-    // Constructor
+    // Constructor for FloorRequest object
     FloorRequest(const std::string& ts, int fl, const std::string& dir, int dest,
             bool fault, const std::string& fType, int pax)
     : timeStamp(ts), floor(fl), direction(dir), destination(dest),
-    hasFault(fault), faultType(fType), passengers(pax), requestID(-1) {}
+    hasFault(fault), faultType(fType), passengers(pax) {}
 };
 
 // Basic elevator states
