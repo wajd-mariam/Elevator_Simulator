@@ -11,7 +11,7 @@
 #include <arpa/inet.h>
 #include <sstream>
 
-// We'll assume your existing logic uses these for state:
+// Variables used by each elevator
 static bool hardFault = false;
 static bool doorsOpen = true;
 static int  currentFloor = 1;
@@ -23,7 +23,7 @@ static std::chrono::steady_clock::time_point lastFaultTime;
 
 /**
  * @brief Send an up-to-date "STATUS" message to the Scheduler. 
- * Format: STATUS|ElevID=x|Floor=y|Fault=z
+ * Format: STATUS|ElevID=x|Floor=y|Fault=z|Direction=dir|State=state|FaultType=type
  */
 static void sendElevatorStatus(int sock, int elevatorID, const std::string &schedIP, int schedPort, const std::string& direction, const std::string& state, const std::string &faultType) {
     std::ostringstream oss;
@@ -41,6 +41,9 @@ static void sendElevatorStatus(int sock, int elevatorID, const std::string &sche
 }
 
 
+/**
+ * Converts the enum ElevatorState to a readable string.
+ */
 std::string elevatorStateToString(ElevatorState state) {
     switch (state) {
         case ElevatorState::WAITING: return "WAITING";
@@ -51,7 +54,7 @@ std::string elevatorStateToString(ElevatorState state) {
     }
 }
 
-
+// Main function for every ElevatorProcess 
 int main(int argc, char* argv[]){
     // Usage: ./ElevatorProcess <listenPort> <elevatorID> <schedulerIP> <schedulerPort>
     if(argc < 5){
@@ -65,7 +68,7 @@ int main(int argc, char* argv[]){
     std::string schedIP = argv[3];
     int schedPort  = std::stoi(argv[4]);
 
-    // 1) Create sockets
+    // Create socket to receive and send messages
     int sock     = createBoundSocket(myPort);
     if(sock < 0){
         std::cerr<<"[Elevator "<<elevatorID<<"] Could not bind on port "<<myPort<<"\n";
@@ -73,7 +76,7 @@ int main(int argc, char* argv[]){
     }
     int sendSock = socket(AF_INET, SOCK_DGRAM, 0);  // For completions + status
 
-    // 2) Continuously receive requests from the Scheduler
+    // Thread to handle requests from Scheduler
     std::thread listener([&]{
         while(!stopAll){
             std::string ip; 
@@ -83,9 +86,10 @@ int main(int argc, char* argv[]){
                 simulateSleepMs(50);
                 continue;
             }
-            // It's presumably a normal floor request:
+
+            // Deserialize incoming FloorRequest from Scheduler
             FloorRequest fr = deserializeRequest(data);
-            
+
             // Setting direction after deserialzing FloorReuqest fr
             std::string direction;
             if (fr.destination > currentFloor)
@@ -95,7 +99,7 @@ int main(int argc, char* argv[]){
             else
                 direction = "IDLE";
 
-            // Handle faults from request
+            // Handle stuck elevator fault from FloorRequest fr
             hardFault = fr.hasFault;
             currentFaultType = fr.faultType;
             if (fr.hasFault) {
@@ -112,11 +116,6 @@ int main(int argc, char* argv[]){
             simulateSleepMs(dist * 1500);
             currentFloor= fr.floor;
 
-            // Determining direction: UP or DOWN or IDLE
-            if (fr.floor > currentFloor) direction = "UP";
-            else if (fr.floor < currentFloor) direction = "DOWN";
-            else direction = "IDLE";
-
             // Doors open
             doorsOpen=true; simulateSleepMs(300);
             // Doors close
@@ -128,9 +127,7 @@ int main(int argc, char* argv[]){
             currentFloor= fr.destination;
             doorsOpen=true; simulateSleepMs(300);
 
-            //std::cout<<"[Elevator "<<elevatorID<<"] Completed request.\n";
-
-            // Send completion message => schedPort+100
+            // Send completion message to scheduler => schedPort+100
             fr.floor       = currentFloor;
             fr.destination = currentFloor;
             fr.timeStamp += "(ElevID="+std::to_string(elevatorID)+")";
@@ -143,13 +140,13 @@ int main(int argc, char* argv[]){
             sendElevatorStatus(sendSock, elevatorID, schedIP, schedPort, direction, elevatorStateToString(eState), fr.faultType);
         }
     });
-    listener.detach();
+    listener.detach(); // Run listener thread in background
 
     // Main loop: check if fault should be cleared. Keep running until user kills it
     while(true){
         simulateSleepMs(500);
 
-        // Clearing hard faults
+        // Automatically clear hard faults after 5 seconds
         if (hardFault) {
             auto now = std::chrono::steady_clock::now();
             auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - lastFaultTime).count();
@@ -162,8 +159,8 @@ int main(int argc, char* argv[]){
         }
     }
     
+    // Clean up
     stopAll=true;
-
     close(sock);
     close(sendSock);
     return 0;

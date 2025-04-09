@@ -13,25 +13,29 @@
 #include <iostream>
 #include <fstream>
 
-// Constant and Global Variables
-const int ELEVATOR_CAPACITY = 4;
-
+// Atomic flag to stop all threads
 static std::atomic<bool> stopAll(false);
 
+// Structure to keep track of elevator status for scheduling decisions
 struct ElevatorData {
     int id;
     int currentFloor;
     bool isFaulted;
 };
 
+// List of all elevators in the system
 static std::vector<ElevatorData> elevInfo;
 
+/**
+ * @brief Choose the best elevator for a request using simple distance-based scheduling.
+ */
 int pickElevator(const FloorRequest &r){
     static int lastChosen = -1;
     
     int best = -1;
     int bestDist = 999999;
 
+    // Loop through elevators in a round-robin fashion
     for (size_t offset = 1; offset <= elevInfo.size(); ++offset) {
         int i = (lastChosen + offset) % elevInfo.size();
         if (elevInfo[i].isFaulted) continue;
@@ -46,9 +50,9 @@ int pickElevator(const FloorRequest &r){
     if (best != -1)
         lastChosen = best;
 
-    //std::cout << "BEST ELEVAOTR" << best << std::endl;
     return best;
 }
+
 
 int main(int argc,char* argv[]){
     if(argc < 4){
@@ -56,23 +60,26 @@ int main(int argc,char* argv[]){
         return 1;
     }
     // Parsing ports from command that initializes scheduler process
-    int schedPort = std::stoi(argv[1]);
-    int floorPort = std::stoi(argv[2]);
-    int nElev     = std::stoi(argv[3]);
+    int schedPort = std::stoi(argv[1]); // Port this scheduler listens on
+    int floorPort = std::stoi(argv[2]); // Port to acknowledge back to Floor
+    int nElev     = std::stoi(argv[3]); // Number of elevators
 
-    // Creating Elevator processes 
+    // Initialize elevator information
     elevInfo.resize(nElev);
     for(int i=0; i<nElev; ++i){
         elevInfo[i].id          = i;
         elevInfo[i].currentFloor= 1;
         elevInfo[i].isFaulted   = false;
     }
-
+    
+    // Create sockets to receive from floor and elevators
     int floorSock    = createBoundSocket(schedPort);     // listens from Floor
     int elevatorSock = createBoundSocket(schedPort+100); // completions/status from Elevator
     int sendSock     = socket(AF_INET, SOCK_DGRAM, 0);
 
-    // Floor -> Scheduler
+    // =====================================
+    // Floor -> Scheduler -> ELevator thread
+    // =====================================
     std::thread floorThread([&]{
         while(!stopAll){
             std::string ip; int p;
@@ -104,7 +111,9 @@ int main(int argc,char* argv[]){
         }
     });
 
-    // Elevator -> Scheduler
+    // ===========================
+    // Elevator -> Scheduler -> Floor thread
+    // ===========================
     std::thread elevatorThread([&]{
         while(!stopAll){
             std::string ip; int p;
@@ -113,10 +122,13 @@ int main(int argc,char* argv[]){
                 simulateSleepMs(100);
                 continue;
             }
-            // check if it's a STATUS or completion
+
+            // Elevator status update message
             if(data.rfind("STATUS|", 0)==0){
                 std::istringstream iss(data);
                 std::string token;
+                
+                 // Parse message in format STATUS|ElevID=x|Floor=y|Fault=z..
                 getline(iss, token, '|'); // "STATUS"
                 getline(iss, token, '|'); // "ElevID=x"
                 int eqPos = token.find('=');
@@ -134,17 +146,21 @@ int main(int argc,char* argv[]){
                 elevInfo[eID].isFaulted   = fault;
                 continue;
             }
-            // else normal completion
+            // else, treat it as a completion message
             auto fr = deserializeRequest(data);
-            // ack floor
+            
+            // Send ACK to floor so it knows the request completed
             std::string ack = "ACK FROM SCHED";
             udpSendString(sendSock, ack, "127.0.0.1", floorPort);
         }
     });
 
+    // Keep scheduler running
     while(true){
         simulateSleepMs(500);
     }
+
+    // Cleanup logic 
     stopAll=true;
     floorThread.join();
     elevatorThread.join();

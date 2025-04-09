@@ -9,17 +9,22 @@
 #include <sstream>
 #include "Common.h"         // includes ElevatorStatus, udpRecvString, createBoundSocket, etc.
 
-std::vector<ElevatorStatus> liveStatus(3);  // for 3 elevators
-std::mutex mtx;
-std::mutex mtxDebug;
 
-std::vector<FloorRequest> liveRequests;
-std::mutex mtxRequests;
-
-int statusCount = 0;
 const int ELEVATOR_CAPACITY = 4;
 
-// Background thread to receive UDP status messages from elevators
+// Stores live elevator status updates (for 3 elevators)
+std::vector<ElevatorStatus> liveStatus(3); 
+
+// Stores floor requests to display
+std::vector<FloorRequest> liveRequests;
+
+// Mutexes for thread-safe access
+std::mutex mtx;            // For elevator status
+std::mutex mtxRequests;    // For request queue
+
+int statusCount = 0;
+
+// Background thread to receive UDP status messages from  (PORT 6000)
 void uiListenerThread() {
     int sock = createBoundSocket(6000);  // UI listens on port 6000
 
@@ -38,6 +43,8 @@ void uiListenerThread() {
     }
 }
 
+
+// Background thread to receive floor requests (port 6001)
 void requestListenerThread() {
     int sock = createBoundSocket(6001);  // requests arrive at port 6001
     if (sock < 0) return;
@@ -49,20 +56,6 @@ void requestListenerThread() {
 
         if (!msg.empty()) {
             FloorRequest fr = deserializeRequest(msg);
-
-            /**
-            std::lock_guard<std::mutex> lock(mtxDebug);
-            std::cout << "[UI DEBUG] Parsed Floor Request => "
-                    << "ReqID=" << fr.requestID
-                    << ", Floor=" << fr.floor
-                    << ", Dest=" << fr.destination
-                    << ", Dir=" << fr.direction
-                    << ", Passengers=" << fr.passengers
-                    << ", Fault=" << (fr.hasFault ? "true" : "false")
-                    << ", Type=" << fr.faultType
-                    << ", AssignedElev=" << fr.assignedElevator
-                    << std::endl;*/
-               
             {
                 std::lock_guard<std::mutex> lock(mtxRequests);
                 liveRequests.push_back(fr);
@@ -71,6 +64,7 @@ void requestListenerThread() {
         simulateSleepMs(100);
     }
 }
+
 
 // Helper function to classify fault type:
 std::string classifyFault(const std::string& faultType) {
@@ -81,10 +75,11 @@ std::string classifyFault(const std::string& faultType) {
     return "None";
 }
 
-// Draw the current UI using ncurses
+
+// Displays the current UI using ncurses
 void displayUI() {
     while (true) {
-        clear();
+        clear();  // clear screen 
         int row = 1;
 
         mvprintw(row++, 2, "+================= Elevator Status ==========================+");
@@ -96,15 +91,12 @@ void displayUI() {
             for (const auto& e : liveStatus) {
                 // Classifying and assigning fault types appropriately:
                 std::string faultDisplay = "None";
-                //if (e.isFaulted) {
-                    // Classify the fault
                 if (e.faultType == "elevatorStuck" || e.faultType == "motorFailure")
                     faultDisplay = "Hard: " + e.faultType;
                 else if (e.faultType == "doorStuck" || e.faultType == "lightMalfunction")
                     faultDisplay = "Soft: " + e.faultType;
                 else
                     faultDisplay = "Unknown: " + e.faultType;
-                //}
 
                 mvprintw(row++, 2, "|   %-6d | %-5d | %-5s | %-9s | %-19s |",
                          e.id,
@@ -136,14 +128,13 @@ void displayUI() {
         }
 
         mvprintw(row++, 2, "+==========================================================================+");
-
         // Footer
         mvprintw(row + 1, 2, "Press 'q' to quit.");
 
         refresh();
 
         // Allow quitting with 'q'
-        timeout(100);  // non-blocking input wait
+        timeout(100); 
         int ch = getch();
         if (ch == 'q' || ch == 'Q') break;
 

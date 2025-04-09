@@ -9,6 +9,10 @@
 #include <chrono>
 #include <thread>
 
+// Global constant
+const int ELEVATOR_CAPACITY = 4;
+
+// Create and bind a UDP socket to a specific port.
 int createBoundSocket(int port){
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
     if(sock<0){
@@ -29,6 +33,7 @@ int createBoundSocket(int port){
     return sock;
 }
 
+// Send a UDP string message to the specified IP and port.
 void udpSendString(int sock, const std::string &msg, const std::string &ip, int port){
     sockaddr_in dest;
     memset(&dest,0,sizeof(dest));
@@ -38,6 +43,7 @@ void udpSendString(int sock, const std::string &msg, const std::string &ip, int 
     sendto(sock, msg.c_str(), msg.size(), 0, (struct sockaddr*)&dest, sizeof(dest));
 }
 
+// Receive a UDP string message, capturing the sender's IP and port.
 std::string udpRecvString(int sock, std::string &senderIP, int &senderPort){
     char buf[1024];
     sockaddr_in src; 
@@ -52,7 +58,7 @@ std::string udpRecvString(int sock, std::string &senderIP, int &senderPort){
     return std::string(buf);
 }
 
-// FloorRequest <-> string
+// Convert FloorRequest to string format
 std::string serializeRequest(const FloorRequest &fr){
     std::ostringstream oss;
     oss << fr.timeStamp << " " << fr.floor << " " << fr.direction << " "
@@ -61,6 +67,7 @@ std::string serializeRequest(const FloorRequest &fr){
     return oss.str();
 }
 
+// Parse string into FloorRequest struct object
 FloorRequest deserializeRequest(const std::string &s){
     FloorRequest fr;
     std::istringstream iss(s);
@@ -69,7 +76,7 @@ FloorRequest deserializeRequest(const std::string &s){
     return fr;
 }
 
-// ElevatorStatus <-> string
+// Convert ElevatorStatus into string for sending to UI
 std::string serializeElevatorStatus(const ElevatorStatus &st){
     // id floor doorsOpen isFaulted state
     std::ostringstream oss;
@@ -82,16 +89,8 @@ std::string serializeElevatorStatus(const ElevatorStatus &st){
     return oss.str();
 }
 
+// Convert string message back into ElevatorStatus struct object
 ElevatorStatus deserializeElevatorStatus(const std::string &s){
-    //ElevatorStatus es;
-    /**
-    std::istringstream iss(s);
-    int doorFlag, faultFlag;
-    iss >> es.id >> es.currentFloor >> doorFlag >> faultFlag >> es.state >> es.direction >> es.currentRequestID;
-    es.doorsOpen = (doorFlag==1);
-    es.isFaulted = (faultFlag==1);
-    return es;  */
-
     ElevatorStatus es;
     std::istringstream iss(s);
     std::string token;
