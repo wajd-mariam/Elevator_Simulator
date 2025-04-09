@@ -57,20 +57,19 @@ void simulateElevatorRequest(ElevatorSim &e, const FloorRequest &req)
     e.currentFloor = req.destination;
 }
 
-TEST(Iteration4_Simulation, DoorStuckTransient)
+// Verifies that a single doorStuck fault is handled as transient (not a hard fault)
+TEST(Iteration5_Simulation, DoorStuckTransient)
 {
     ElevatorSim e;
-
     FloorRequest req("xx", 3, "Up", 5, true, "doorStuck", 2);
-
     simulateElevatorRequest(e, req);
-
     EXPECT_FALSE(e.hardFault) << "First doorStuck should be transient => no permanent fault";
     EXPECT_EQ(e.currentFloor, 5);
     EXPECT_TRUE(e.doorStuckFixedOnce);
 }
 
-TEST(Iteration4_Simulation, DoorStuckPermanentSecondTime)
+// Verifies that encountering doorStuck twice results in a hard fault
+TEST(Iteration5_Simulation, DoorStuckPermanentSecondTime)
 {
     ElevatorSim e;
 
@@ -88,7 +87,8 @@ TEST(Iteration4_Simulation, DoorStuckPermanentSecondTime)
     EXPECT_EQ(e.currentFloor, 1);
 }
 
-TEST(Iteration4_Simulation, StuckElevatorImmediateFault)
+// Verifies that a stuckElevator fault causes immediate hard fault
+TEST(Iteration5_Simulation, StuckElevatorImmediateFault)
 {
     ElevatorSim e;
 
@@ -101,7 +101,8 @@ TEST(Iteration4_Simulation, StuckElevatorImmediateFault)
         << "No movement because faulted immediately";
 }
 
-TEST(Iteration4_Simulation, TimerFaultLongDistance)
+// Verifies that a long trip exceeding TIMEOUT threshold triggers fault
+TEST(Iteration5_Simulation, TimerFaultLongDistance)
 {
     ElevatorSim e;
     FloorRequest req("xx", 2, "Up", 20, false, "noFault", 3);
@@ -113,7 +114,8 @@ TEST(Iteration4_Simulation, TimerFaultLongDistance)
         << "No final movement since faulted mid-trip";
 }
 
-TEST(Iteration4_Simulation, NoFaultShortTrip)
+// Verifies that a valid short request without fault works properly
+TEST(Iteration5_Simulation, NoFaultShortTrip)
 {
     ElevatorSim e; // floor=1
     FloorRequest req("xx", 2, "Up", 3, false, "noFault", 2);
@@ -127,7 +129,8 @@ TEST(Iteration4_Simulation, NoFaultShortTrip)
     EXPECT_FALSE(e.doorStuckFixedOnce);
 }
 
-TEST(Iteration4_Simulation, OverCapacity)
+// Verifies that requests exceeding elevator capacity are ignored (no movement or fault)
+TEST(Iteration5_Simulation, OverCapacity)
 {
     ElevatorSim e;
     // 5 passengers => capacity=4 => "Full" => no movement => no fault
@@ -137,6 +140,61 @@ TEST(Iteration4_Simulation, OverCapacity)
     EXPECT_FALSE(e.hardFault);
     // Did not move => floor remains 1
     EXPECT_EQ(e.currentFloor, 1);
+}
+
+// UI Test: Verifies that a valid STATUS message is correctly parsed into an ElevatorStatus object
+TEST(Iteration5_Display, DeserializeElevatorStatusSimple) {
+    std::string msg = "STATUS|ElevID=0|Floor=5|Fault=0|Direction=UP|State=MOVING|FaultType=noFault";
+    ElevatorStatus es = deserializeElevatorStatus(msg);
+    EXPECT_EQ(es.id, 0);
+    EXPECT_EQ(es.currentFloor, 5);
+    EXPECT_TRUE(es.doorsOpen);
+    EXPECT_FALSE(es.isFaulted);
+    EXPECT_EQ(es.state, "MOVING");
+    EXPECT_EQ(es.direction, "UP");
+    EXPECT_EQ(es.faultType, "noFault");
+}
+
+// UI Test: Verifies that out-of-order fields are parsed correctly
+TEST(Iteration5_Display, DeserializeElevatorStatusOutOfOrderFields)
+{
+    std::string msg = "STATUS|Direction=UP|State=MOVING|Floor=9|ElevID=2|Fault=0|FaultType=doorStuck";
+    ElevatorStatus es = deserializeElevatorStatus(msg);
+
+    EXPECT_EQ(es.id, 2);
+    EXPECT_EQ(es.currentFloor, 9);
+    EXPECT_FALSE(es.isFaulted);
+    EXPECT_EQ(es.state, "MOVING");
+    EXPECT_EQ(es.direction, "UP");
+    EXPECT_EQ(es.faultType, "doorStuck");
+}
+
+// UI Test: Verifies partial messages are handled gracefully (missing some fields)
+TEST(Iteration5_Display, DeserializeElevatorStatusPartialMessage)
+{
+    std::string msg = "STATUS|ElevID=4|Floor=8|Fault=1";
+    ElevatorStatus es = deserializeElevatorStatus(msg);
+
+    EXPECT_EQ(es.id, 4);
+    EXPECT_EQ(es.currentFloor, 8);
+    EXPECT_TRUE(es.isFaulted);
+    EXPECT_EQ(es.state, "");  // not included
+    EXPECT_EQ(es.direction, "");  // not included
+    EXPECT_EQ(es.faultType, "noFault");  // not included
+}
+
+// UI Test: Test to ensure correct deserialization of a moving elevator going DOWN with a doorStuck fault (soft fault). 
+TEST(Iteration5_Display, DeserializeElevatorStatus_DoorStuckMovingDown)
+{
+    std::string input = "STATUS|ElevID=1|Floor=4|Fault=1|Direction=DOWN|State=MOVING|FaultType=doorStuck";
+    ElevatorStatus es = deserializeElevatorStatus(input);
+
+    EXPECT_EQ(es.id, 1);
+    EXPECT_EQ(es.currentFloor, 4);
+    EXPECT_TRUE(es.isFaulted);
+    EXPECT_EQ(es.direction, "DOWN");
+    EXPECT_EQ(es.state, "MOVING");
+    EXPECT_EQ(es.faultType, "doorStuck");
 }
 
 int main(int argc, char** argv){
