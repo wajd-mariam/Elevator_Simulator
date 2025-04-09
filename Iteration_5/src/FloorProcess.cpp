@@ -6,6 +6,8 @@
 #include <vector>
 #include <unistd.h>
 
+const int ELEVATOR_CAPACITY = 4;
+
 int main(int argc,char* argv[]){
     // Usage: ./FloorProcess <myPort> <schedulerIP> <schedulerPort> input.txt
     if(argc<5){
@@ -55,8 +57,7 @@ int main(int argc,char* argv[]){
         std::string msg = serializeRequest(r);
         udpSendString(sock, msg, schedIP, schedPort);
         udpSendString(sock, msg, "127.0.0.1", 6001);  // Send copy to UI
-        //std::cout<<"[Floor] Sent request floor="<<r.floor
-        //        <<" -> "<<r.destination<<"\n";
+
         simulateSleepMs(500);
     }
 
@@ -65,9 +66,6 @@ int main(int argc,char* argv[]){
         std::string ip; 
         int rp;
         auto data = udpRecvString(sock, ip, rp);
-        if(!data.empty()){
-            //std::cout<<"[Floor] Acknowledgment: "<<data<<"\n";
-        }
         simulateSleepMs(500);
     }
     close(sock);
