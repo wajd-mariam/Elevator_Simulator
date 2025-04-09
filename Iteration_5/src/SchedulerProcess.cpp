@@ -10,6 +10,11 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sstream>
+#include <iostream>
+#include <fstream>
+
+// Constant and Global Variables
+const int ELEVATOR_CAPACITY = 4;
 
 static std::atomic<bool> stopAll(false);
 
@@ -41,6 +46,7 @@ int pickElevator(const FloorRequest &r){
     if (best != -1)
         lastChosen = best;
 
+    //std::cout << "BEST ELEVAOTR" << best << std::endl;
     return best;
 }
 
@@ -49,10 +55,12 @@ int main(int argc,char* argv[]){
         // Removed std::cout
         return 1;
     }
+    // Parsing ports from command that initializes scheduler process
     int schedPort = std::stoi(argv[1]);
     int floorPort = std::stoi(argv[2]);
     int nElev     = std::stoi(argv[3]);
 
+    // Creating Elevator processes 
     elevInfo.resize(nElev);
     for(int i=0; i<nElev; ++i){
         elevInfo[i].id          = i;
@@ -77,15 +85,22 @@ int main(int argc,char* argv[]){
 
             // pick elevator
             int best = pickElevator(fr);
+            fr.assignedElevator = best;
+
+            // If no elevators are available
             if(best < 0){
                 // no elevator => discard
                 std::string ack = "ACK FROM SCHED";
                 udpSendString(sendSock, ack, "127.0.0.1", floorPort);
                 continue;
             }
+        
+            // Normal case: send to elevator
             int ePort = 5000 + best;
             auto msg  = serializeRequest(fr);
             udpSendString(sendSock, msg, "127.0.0.1", ePort);
+
+            udpSendString(sendSock, msg, "127.0.0.1", 6001);
         }
     });
 
