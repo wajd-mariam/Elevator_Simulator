@@ -13,7 +13,8 @@ struct FloorRequest {
     std::string faultType;  // "doorStuck", "stuckElevator", etc.
     int passengers = 0;         // passenger count
     int requestID = -1;
-
+    int assignedElevator = -1;
+    
     FloorRequest() = default;
     
     // Constructor for FloorRequest object
