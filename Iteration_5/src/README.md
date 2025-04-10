@@ -1,4 +1,4 @@
-# Elevator Control System - Iteration 3 - SYSC 3303 - B2 - Group 1 - Winter 2025
+# Elevator Control System - Iteration 5 - SYSC 3303 - B2 - Group 1 - Winter 2025
 
 Authors:
 Ahmed Ali 101181126,
@@ -18,24 +18,23 @@ Date: March 22nd, 2025
 2) sudo apt install make libgtest-dev -y
 
 ## Usage
-1) Extract SYSC_3303_B2_G1_Iteration4.zip file
+1) Extract SYSC_3303_B2_G1_Iteration5.zip file
 2) Navigate to the "src" directory
-3) Open a terminal and enter:
+3) Open a terminal in the "src" directory and enter:
 - "make clean"
 - "make"
-4) Open a 4 other new terminal windows and copy and execute the commands below in order:
-- ./SchedulerProcess 4001 4000 3
-- ./ElevatorProcess 5000 0 127.0.0.1 4001
-- ./ElevatorProcess 5001 1 127.0.0.1 4001
-- ./ElevatorProcess 5002 2 127.0.0.1 4001
-- ./FloorProcess 4000 127.0.0.1 4001 input.txt
+4) To run the UI, enter the following command:
+- "./ElevatorUI"
 5) To run tests, enter the following command in a new terminal:
-- "./iteration3_tests"
+- "./iteration5_tests"
 
 ## Components
+
+### Common 
+- Common.h / Common.cpp: Contains shared structures and utility functions, including FloorRequest serialization.
+
 ### Floor Subsystem
 - FloorProcess.cpp:  Handles reading requests from an input file and sending them to the scheduler.
-- Common.h / Common.cpp: Contains shared structures and utility functions, including FloorRequest serialization.
 
 ### Scheduler Subsystem
 - SchedulerProcess.cpp: Acts as the central scheduler, receiving floor requests and assigning elevators based on proximity.
@@ -43,12 +42,8 @@ Date: March 22nd, 2025
 ### Elevator Subsystem
 - ElevatorProcess.cpp: Simulates an elevator, moving between floors and sending completion messages back to the scheduler.
 
-### Global Variables
-- Common.h / Common.cpp: Defines shared structures and functions, such as request serialization, UDP communication, and sleep simulation.
-
 ### Testing
-iteration4_tests.cpp: test suite
-
+iteration5_tests.cpp: test suite
 
 The system operates using UDP communication for message passing between processes.
 
@@ -57,10 +52,10 @@ Elevators prioritize requests based on proximity and availability.
 The project includes robust error handling for malformed requests and missing input files.
 
 ## Responsibilities
-- Ahmed Ali -> Testing, SchedulerProcess.cpp, general code modification and debugging
-- Wajd Mariam-> Timing Diagrams, ElevatorProcess.cpp, general code modification and debugging.
+- Ahmed Ali -> Testing and general code modification and debugging
+- Wajd Mariam-> UI development and general code modification and debugging.
 - Albert Robu-> Testing
 - Azan Huggins Goolamallee-> README.md and general code modification and debugging
-- Sam Nieuwenhuis -> FloorProcess.cpp Diagrams
+- Sam Nieuwenhuis -> Timing Diagrams
 
 
