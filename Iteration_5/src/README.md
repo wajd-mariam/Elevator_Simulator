@@ -11,7 +11,7 @@ Samuel Nieuwenhuis 101225633
 
 This project is meant to create and begin testing a program specifically for elevator simulation. This is done by using 3 subsystems, the floor that people press the button to request an elevator, the elevator itself, and the scheduler which is used to mediate between the two
 
-Date: March 22nd, 2025
+Date: April 13th, 2025
 
 ## Setup:
 1) Ensure having C++11 compiler and pthread library installed
@@ -57,5 +57,6 @@ The project includes robust error handling for malformed requests and missing in
 - Albert Robu-> Testing
 - Azan Huggins Goolamallee-> README.md and general code modification and debugging
 - Sam Nieuwenhuis -> Timing Diagrams
+
 
 
